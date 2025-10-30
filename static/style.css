@@ -1,0 +1,50 @@
+body {
+  font-family: "Poppins", sans-serif;
+  background: #101820;
+  color: #fff;
+  text-align: center;
+  margin: 0;
+  padding: 30px;
+}
+
+.container {
+  max-width: 800px;
+  margin: auto;
+  background: #1c1c1c;
+  border-radius: 15px;
+  padding: 20px 30px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.controls {
+  margin: 20px 0;
+}
+
+select, input[type=checkbox], button {
+  margin: 10px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+button {
+  background: #ff1e00;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #e01800;
+}
+
+.hidden {
+  display: none;
+}
+
+#lapImage {
+  margin-top: 15px;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 2px solid #333;
+}

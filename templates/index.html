@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🏎️ F1 ERS AI Optimizer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏁 F1 ERS Deployment Optimizer</h1>
+
+      <div class="controls">
+        <label>Track Condition:</label>
+        <select id="trackCondition">
+          <option value="DRY">Dry</option>
+          <option value="WET">Wet</option>
+        </select>
+
+        <label>Enable DRS:</label>
+        <input type="checkbox" id="drsToggle" checked />
+
+        <button id="runBtn">Run Optimization</button>
+      </div>
+
+      <div id="loader" class="hidden">Running AI Optimization... ⏳</div>
+
+      <div id="results" class="hidden">
+        <h2>Results</h2>
+        <p>
+          <strong>Fastest Lap Time:</strong> <span id="lapTime"></span> seconds
+        </p>
+        <p><strong>Best Strategy:</strong></p>
+        <pre id="strategyOutput"></pre>
+        <img id="lapImage" src="" alt="Optimal Lap Visualization" />
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
