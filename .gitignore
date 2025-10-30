@@ -54,3 +54,7 @@ tmp/
 Thumbs.db
 desktop.ini
 
+# Generated visualization images (do not commit run artifacts)
+static/lap_viz_*.png
+static/results/
+
