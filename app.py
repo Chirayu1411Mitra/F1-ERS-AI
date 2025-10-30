@@ -198,6 +198,109 @@ def simulate_full(strategy, df, track_condition: str, drs_enabled: bool):
         batteries.append(current_batt)
     return np.array(speeds), np.array(batteries)
 
+
+# -------- Policy model loading/inference --------
+_POLICY_CACHE = None
+
+def _ensure_joblib():
+    try:
+        import joblib  # type: ignore
+        return joblib
+    except Exception:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "joblib", "scikit-learn", "--quiet"])  # noqa: E501
+        import joblib  # type: ignore
+        return joblib
+
+
+def load_policy_model(model_path: str = os.path.join(os.path.dirname(__file__), "models", "ers_policy.pkl")):
+    global _POLICY_CACHE
+    if _POLICY_CACHE is not None:
+        return _POLICY_CACHE
+    joblib = _ensure_joblib()
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Policy model not found at {model_path}. Train it first with scripts/train_policy.py")
+    _POLICY_CACHE = joblib.load(model_path)
+    return _POLICY_CACHE
+
+
+def _build_policy_features(df: pd.DataFrame, track_condition: str, drs_enabled: bool, feature_names: list) -> np.ndarray:
+    """Create a feature vector aligned with saved feature_names from the trained model."""
+    n = len(df)
+    lengths = df["length_m"].astype(float).to_numpy()
+    speeds = df["baseline_speed_kph"].astype(float).to_numpy()
+    brakes = df["is_braking_zone"].astype(int).to_numpy()
+    drs = df["is_drs_zone"].astype(int).to_numpy()
+    total_len = float(lengths.sum()) if n > 0 else 1.0
+    cum_end = np.cumsum(lengths) if n else np.array([])
+    avg_speed_kph = float(np.mean(speeds)) if n else 0.0
+    brake_ratio = float(np.mean(brakes)) if n else 0.0
+    drs_ratio = float(np.mean(drs)) if n else 0.0
+
+    def seg_val(prefix: str, idx: int) -> float:
+        if prefix == "length_":
+            return float(lengths[idx]) if idx < n else 0.0
+        if prefix == "speed_":
+            return float(speeds[idx]) if idx < n else 0.0
+        if prefix == "brake_":
+            return float(int(brakes[idx])) if idx < n else 0.0
+        if prefix == "drs_":
+            return float(int(drs[idx])) if idx < n else 0.0
+        if prefix == "pos_":
+            return float(idx / (n - 1)) if n > 1 and idx < n else 0.0
+        if prefix == "cumdist_":
+            return float(cum_end[idx] / total_len) if idx < n and total_len > 0 else 0.0
+        if prefix == "next1_brake_":
+            j = idx + 1
+            return float(int(brakes[j])) if j < n else 0.0
+        if prefix == "next2_brake_":
+            j = idx + 2
+            return float(int(brakes[j])) if j < n else 0.0
+        if prefix == "next1_drs_":
+            j = idx + 1
+            return float(int(drs[j])) if j < n else 0.0
+        if prefix == "next2_drs_":
+            j = idx + 2
+            return float(int(drs[j])) if j < n else 0.0
+        if prefix == "speed_delta_":
+            prev = speeds[idx - 1] if idx - 1 >= 0 else (speeds[idx] if idx < n else 0.0)
+            cur = speeds[idx] if idx < n else 0.0
+            return float(cur - prev)
+        if prefix == "speed_ma3_":
+            prev = speeds[idx - 1] if idx - 1 >= 0 else (speeds[idx] if idx < n else 0.0)
+            cur = speeds[idx] if idx < n else 0.0
+            nxt = speeds[idx + 1] if idx + 1 < n else (speeds[idx] if idx < n else 0.0)
+            return float(np.mean([prev, cur, nxt]))
+        return 0.0
+
+    values = []
+    for name in feature_names:
+        if name == "track_length_m":
+            values.append(total_len)
+        elif name == "drs_enabled":
+            values.append(1.0 if drs_enabled else 0.0)
+        elif name == "avg_speed_kph":
+            values.append(avg_speed_kph)
+        elif name == "brake_ratio":
+            values.append(brake_ratio)
+        elif name == "drs_ratio":
+            values.append(drs_ratio)
+        elif name == "cond_DRY":
+            values.append(1.0 if track_condition == "DRY" else 0.0)
+        elif name == "cond_WET":
+            values.append(1.0 if track_condition == "WET" else 0.0)
+        else:
+            # Segment features with pattern prefix + index
+            try:
+                prefix, idx_str = name.rsplit('_', 1)
+                idx = int(idx_str)
+                prefix = prefix + '_'  # restore trailing underscore
+            except Exception:
+                values.append(0.0)
+                continue
+            values.append(seg_val(prefix, idx))
+
+    return np.array(values, dtype=float).reshape(1, -1)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -211,35 +314,54 @@ def run_ai():
             track_condition = "DRY"
         drs_enabled = bool(data.get('drs_enabled', True))
         event = str(data.get('event', 'Monza')) or 'Monza'
+        use_policy = bool(data.get('use_policy', False))
 
         # Build track features from FastF1 for selected event (2024 Race)
         df = build_track_df(2024, event, 'R', n_segments=10)
 
-        # Run GA optimizer (auto-install if missing)
-        try:
-            from geneticalgorithm import geneticalgorithm as ga
-        except Exception:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "geneticalgorithm", "--quiet"])  # non-interactive
-            from geneticalgorithm import geneticalgorithm as ga
-        var_boundaries = np.array([[0, 2]] * len(df))
-        def fitness(x):
-            strat = [int(round(v)) for v in x]
-            return simulate_and_time(strat, df, track_condition, drs_enabled)
-        model = ga(function=fitness, dimension=len(df), variable_type='int',
-                   variable_boundaries=var_boundaries,
-                   algorithm_parameters={
-                       'max_num_iteration': 250,
-                       'population_size': 60,
-                       'mutation_probability': 0.1,
-                       'elit_ratio': 0.01,
-                       'parents_portion': 0.8,
-                       'crossover_probability': 0.5,
-                       'crossover_type': 'uniform',
-                       'max_iteration_without_improv': 60
-                   })
-        model.run()
-        best_strategy = [int(round(v)) for v in model.best_variable]
-        best_time = float(model.best_function)
+        policy_error = None
+        if use_policy:
+            # Use trained policy
+            try:
+                model_bundle = load_policy_model()
+                clf = model_bundle["model"]
+                feat_names = model_bundle.get("feature_names", [])
+                X = _build_policy_features(df, track_condition, drs_enabled, feat_names)
+                y_pred = clf.predict(X)[0]
+                best_strategy = [int(v) for v in y_pred]
+                best_time = float(simulate_and_time(best_strategy, df, track_condition, drs_enabled))
+                mode_tag = 'Policy'
+            except FileNotFoundError as e:
+                # Fallback to GA seamlessly
+                policy_error = str(e)
+                use_policy = False
+        else:
+            # Run GA optimizer (auto-install if missing)
+            try:
+                from geneticalgorithm import geneticalgorithm as ga
+            except Exception:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "geneticalgorithm", "--quiet"])  # non-interactive
+                from geneticalgorithm import geneticalgorithm as ga
+            var_boundaries = np.array([[0, 2]] * len(df))
+            def fitness(x):
+                strat = [int(round(v)) for v in x]
+                return simulate_and_time(strat, df, track_condition, drs_enabled)
+            model = ga(function=fitness, dimension=len(df), variable_type='int',
+                       variable_boundaries=var_boundaries,
+                       algorithm_parameters={
+                           'max_num_iteration': 250,
+                           'population_size': 60,
+                           'mutation_probability': 0.1,
+                           'elit_ratio': 0.01,
+                           'parents_portion': 0.8,
+                           'crossover_probability': 0.5,
+                           'crossover_type': 'uniform',
+                           'max_iteration_without_improv': 60
+                       })
+            model.run()
+            best_strategy = [int(round(v)) for v in model.best_variable]
+            best_time = float(model.best_function)
+            mode_tag = 'GA'
 
         # Re-simulate to get series
         speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled)
@@ -247,10 +369,54 @@ def run_ai():
         cum = np.concatenate(([0.0], np.cumsum(lengths)))
         x_mid = (cum[1:] + cum[:-1]) / 2.0
         image_path = create_visualization(x_mid, speeds, batteries,
-            title_suffix=f"({event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
+            title_suffix=f"({mode_tag} • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
+
+        label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
+        resp = {
+            'lap_time': f'{best_time:.3f}',
+            'strategy': [label_map[v] for v in best_strategy],
+            'image_path': image_path,
+            'source': mode_tag
+        }
+        if policy_error:
+            resp['note'] = f'Policy unavailable: {policy_error}. Used GA fallback.'
+        return jsonify(resp)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/predict-policy', methods=['POST'])
+def predict_policy():
+    try:
+        data = request.json or {}
+        track_condition = str(data.get('track_condition', 'DRY')).upper()
+        if track_condition not in {"DRY", "WET"}:
+            track_condition = "DRY"
+        drs_enabled = bool(data.get('drs_enabled', True))
+        event = str(data.get('event', 'Monza')) or 'Monza'
+
+        # Build features from telemetry
+        df = build_track_df(2024, event, 'R', n_segments=10)
+        model_bundle = load_policy_model()
+        clf = model_bundle["model"]
+
+        feat_names = model_bundle.get("feature_names", [])
+        X = _build_policy_features(df, track_condition, drs_enabled, feat_names)
+        y_pred = clf.predict(X)[0]
+        best_strategy = [int(v) for v in y_pred]
+        best_time = float(simulate_and_time(best_strategy, df, track_condition, drs_enabled))
+
+        # Series for plotting
+        speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled)
+        lengths = df["length_m"].astype(float).to_numpy()
+        cum = np.concatenate(([0.0], np.cumsum(lengths)))
+        x_mid = (cum[1:] + cum[:-1]) / 2.0
+        image_path = create_visualization(x_mid, speeds, batteries,
+            title_suffix=f"(Policy • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
 
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
         return jsonify({
+            'source': 'policy',
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
             'image_path': image_path

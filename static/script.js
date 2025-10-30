@@ -9,7 +9,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
   results.classList.add("hidden");
 
   try {
-    const response = await fetch("/run-ai", {
+    const response = await fetch("/predict-policy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
