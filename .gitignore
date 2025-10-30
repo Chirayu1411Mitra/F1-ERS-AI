@@ -12,7 +12,13 @@ __pycache__/
 venv/
 ENV/
 env/
+venv/
 
+fastf1_cache/
+datasets/*.csv
+*.ipynb
+
+.vercel/
 # Packaging/build metadata
 *.egg-info/
 .eggs/
@@ -58,3 +64,4 @@ desktop.ini
 static/lap_viz_*.png
 static/results/
 
+vercel.json
