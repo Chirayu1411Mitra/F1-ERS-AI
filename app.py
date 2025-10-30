@@ -230,7 +230,7 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
     ax.set_facecolor("#0f1318")
     # Plot base track lightly (background line)
     ax.plot(x, y, color="#0b0e13", linewidth=8, alpha=0.9, zorder=1, solid_capstyle='round')
-    # Overlay colored segments according to strategy with glow
+    # Overlay colored segments with thin black outline for separation
     for i in range(n_segments):
         l, r = edges[i], edges[i + 1]
         mask = (dist >= l) & (dist < r if i < n_segments - 1 else dist <= r)
@@ -238,8 +238,13 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
             continue
         base_color = color_map.get(int(strategy[i]), "#888888")
         glow_rgba = mcolors.to_rgba(base_color, alpha=0.35)
+        # Outline path
+        ax.plot(
+            x[mask], y[mask], color="#0b0b0b", linewidth=6, zorder=2, solid_capstyle='round'
+        )
+        # Colored path on top
         line, = ax.plot(
-            x[mask], y[mask], color=base_color, linewidth=4, zorder=2, solid_capstyle='round'
+            x[mask], y[mask], color=base_color, linewidth=4, zorder=3, solid_capstyle='round'
         )
         line.set_path_effects([
             patheffects.Stroke(linewidth=10, foreground=glow_rgba),
@@ -257,15 +262,74 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
     plt.close()
     return f"/static/{filename}"
 
+@app.route('/track-xy', methods=['POST'])
+def track_xy():
+    try:
+        if fastf1 is None:
+            return jsonify({"error": "fastf1 not available"}), 500
+        data = request.json or {}
+        event = str(data.get('event', 'Monza')) or 'Monza'
+        # Normalize as used elsewhere
+        aliases = {
+            "BAHRAIN": "Bahrain",
+            "JEDDAH": "Saudi Arabian Grand Prix",
+            "MELBOURNE": "Australian Grand Prix",
+            "IMOLA": "Emilia Romagna Grand Prix",
+            "MONACO": "Monaco",
+            "BARCELONA": "Spanish Grand Prix",
+            "SILVERSTONE": "British Grand Prix",
+            "SPA": "Belgian Grand Prix",
+            "MONZA": "Italian Grand Prix",
+            "ABU DHABI": "Abu Dhabi Grand Prix",
+        }
+        key = str(event).strip().upper()
+        event_norm = aliases.get(key, event)
+        session = fastf1.get_session(2024, event_norm, 'R')
+        session.load()
+        lap = session.laps.pick_fastest()
+        tel = lap.get_telemetry()
+        if 'X' not in tel.columns or 'Y' not in tel.columns:
+            return jsonify({"error": "XY not available"}), 400
+        x = tel['X'].to_numpy()
+        y = tel['Y'].to_numpy()
+        # Normalize to [0,1] with padding while preserving aspect
+        min_x, max_x = float(np.nanmin(x)), float(np.nanmax(x))
+        min_y, max_y = float(np.nanmin(y)), float(np.nanmax(y))
+        width = max(1e-6, max_x - min_x)
+        height = max(1e-6, max_y - min_y)
+        pad = 0.06
+        if width >= height:
+            scale = 1.0 - 2 * pad
+            norm_x = (x - min_x) / width * scale + pad
+            norm_y = (y - min_y) / width * scale + (1 - (height / width) * scale) / 2
+        else:
+            scale = 1.0 - 2 * pad
+            norm_y = (y - min_y) / height * scale + pad
+            norm_x = (x - min_x) / height * scale + (1 - (width / height) * scale) / 2
+        # Return arrays (may be large; client will sample for animation)
+        return jsonify({
+            'x': norm_x.tolist(),
+            'y': norm_y.tolist()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # --- GA/Simulation logic (mirrors notebook) ---
 ACTION_COAST, ACTION_DEPLOY, ACTION_HARVEST = 0, 1, 2
 MAX_BATTERY_MJ = 4.0
 MAX_DEPLOY_PER_LAP_MJ = 4.0
 MAX_HARVEST_PER_LAP_MJ = 2.0
 
-def simulate_and_time(strategy, df, track_condition: str, drs_enabled: bool):
-    grip_mod = 0.85 if track_condition == "WET" else 1.0
-    harvest_eff = 0.7 if track_condition == "WET" else 1.0
+def simulate_and_time(strategy, df, track_condition: str, drs_enabled: bool,
+                      aero_downforce: float = 0.5, drag_coeff: float = 1.0,
+                      wind_speed_mps: float = 0.0, wind_is_headwind: bool = True):
+    # Condition modifiers
+    if track_condition == "WET":
+        grip_mod, harvest_eff = 0.85, 0.70
+    elif track_condition == "INTERMEDIATE":
+        grip_mod, harvest_eff = 0.93, 0.85
+    else:
+        grip_mod, harvest_eff = 1.00, 1.00
     drs_mod = 1.15 if drs_enabled else 1.0
     total_time = 0.0
     current_batt = MAX_BATTERY_MJ
@@ -276,6 +340,12 @@ def simulate_and_time(strategy, df, track_condition: str, drs_enabled: bool):
     HARVEST_BRAKE = 0.85
     cost_per_deploy = MAX_DEPLOY_PER_LAP_MJ / (n / 2)
     gain_per_harvest = MAX_HARVEST_PER_LAP_MJ / (n / 4)
+    # Simplified aerodynamics/wind effects
+    downforce_bonus = 1.0 + 0.06 * max(0.0, min(1.0, aero_downforce))  # helps in corners
+    straight_drag_penalty = 1.0 / max(0.6, min(1.4, drag_coeff))        # hurts on straights
+    wind_k = 0.003 * max(0.0, wind_speed_mps)
+    wind_factor_straight = (1.0 - wind_k) if wind_is_headwind else (1.0 + wind_k)
+
     for i in range(n):
         seg = df.iloc[i]
         speed_kph = float(seg["baseline_speed_kph"]) * grip_mod
@@ -293,6 +363,12 @@ def simulate_and_time(strategy, df, track_condition: str, drs_enabled: bool):
                 delta = gain_per_harvest * harvest_eff
                 current_batt = min(MAX_BATTERY_MJ, current_batt + delta)
                 total_harvest += delta
+        # Apply aero/wind factors: assume corners align with braking zones
+        if int(seg["is_braking_zone"]) == 1:
+            speed_kph *= downforce_bonus
+        else:
+            speed_kph *= straight_drag_penalty * wind_factor_straight
+
         if speed_kph <= 0:
             return 1e9
         total_time += float(seg["length_m"]) / (speed_kph / 3.6)
@@ -300,9 +376,15 @@ def simulate_and_time(strategy, df, track_condition: str, drs_enabled: bool):
         return 1e9
     return total_time
 
-def simulate_full(strategy, df, track_condition: str, drs_enabled: bool):
-    grip_mod = 0.85 if track_condition == "WET" else 1.0
-    harvest_eff = 0.7 if track_condition == "WET" else 1.0
+def simulate_full(strategy, df, track_condition: str, drs_enabled: bool,
+                  aero_downforce: float = 0.5, drag_coeff: float = 1.0,
+                  wind_speed_mps: float = 0.0, wind_is_headwind: bool = True):
+    if track_condition == "WET":
+        grip_mod, harvest_eff = 0.85, 0.70
+    elif track_condition == "INTERMEDIATE":
+        grip_mod, harvest_eff = 0.93, 0.85
+    else:
+        grip_mod, harvest_eff = 1.00, 1.00
     drs_mod = 1.15 if drs_enabled else 1.0
     n = len(df)
     current_batt = MAX_BATTERY_MJ
@@ -314,6 +396,11 @@ def simulate_full(strategy, df, track_condition: str, drs_enabled: bool):
     gain_per_harvest = MAX_HARVEST_PER_LAP_MJ / (n / 4)
     speeds = []
     batteries = []
+    downforce_bonus = 1.0 + 0.06 * max(0.0, min(1.0, aero_downforce))
+    straight_drag_penalty = 1.0 / max(0.6, min(1.4, drag_coeff))
+    wind_k = 0.003 * max(0.0, wind_speed_mps)
+    wind_factor_straight = (1.0 - wind_k) if wind_is_headwind else (1.0 + wind_k)
+
     for i in range(n):
         seg = df.iloc[i]
         speed_kph = float(seg["baseline_speed_kph"]) * grip_mod
@@ -329,6 +416,10 @@ def simulate_full(strategy, df, track_condition: str, drs_enabled: bool):
             delta = gain_per_harvest * harvest_eff
             current_batt = min(MAX_BATTERY_MJ, current_batt + delta)
             total_harvest += delta
+        if int(seg["is_braking_zone"]) == 1:
+            speed_kph *= downforce_bonus
+        else:
+            speed_kph *= straight_drag_penalty * wind_factor_straight
         speeds.append(speed_kph)
         batteries.append(current_batt)
     return np.array(speeds), np.array(batteries)
@@ -445,11 +536,15 @@ def run_ai():
     try:
         data = request.json or {}
         track_condition = str(data.get('track_condition', 'DRY')).upper()
-        if track_condition not in {"DRY", "WET"}:
+        if track_condition not in {"DRY", "INTERMEDIATE", "WET"}:
             track_condition = "DRY"
         drs_enabled = bool(data.get('drs_enabled', True))
         event = str(data.get('event', 'Monza')) or 'Monza'
         use_policy = bool(data.get('use_policy', False))
+        aero_downforce = float(data.get('aero_downforce', 0.5))
+        drag_coeff = float(data.get('drag_coeff', 1.0))
+        wind_speed_mps = float(data.get('wind_speed_mps', 0.0))
+        wind_is_headwind = bool(data.get('wind_is_headwind', True))
 
         # Build track features from FastF1 for selected event (2024 Race)
         df = build_track_df(2024, event, 'R', n_segments=10)
@@ -464,7 +559,8 @@ def run_ai():
                 X = _build_policy_features(df, track_condition, drs_enabled, feat_names)
                 y_pred = clf.predict(X)[0]
                 best_strategy = [int(v) for v in y_pred]
-                best_time = float(simulate_and_time(best_strategy, df, track_condition, drs_enabled))
+                best_time = float(simulate_and_time(best_strategy, df, track_condition, drs_enabled,
+                                                   aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind))
                 mode_tag = 'Policy'
             except FileNotFoundError as e:
                 # Fallback to GA seamlessly
@@ -480,7 +576,8 @@ def run_ai():
             var_boundaries = np.array([[0, 2]] * len(df))
             def fitness(x):
                 strat = [int(round(v)) for v in x]
-                return simulate_and_time(strat, df, track_condition, drs_enabled)
+                return simulate_and_time(strat, df, track_condition, drs_enabled,
+                                         aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind)
             model = ga(function=fitness, dimension=len(df), variable_type='int',
                        variable_boundaries=var_boundaries,
                        algorithm_parameters={
@@ -499,7 +596,8 @@ def run_ai():
             mode_tag = 'GA'
 
         # Re-simulate to get series
-        speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled)
+        speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled,
+                                          aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind)
         lengths = df["length_m"].astype(float).to_numpy()
         cum = np.concatenate(([0.0], np.cumsum(lengths)))
         x_mid = (cum[1:] + cum[:-1]) / 2.0
@@ -508,12 +606,41 @@ def run_ai():
 
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
         track_segments = _build_track_segments_xy(event, 2024, 'R', len(df), best_strategy)
+        # Robustness: evaluate same strategy across conditions
+        robustness = {}
+        for cond in ["DRY", "INTERMEDIATE", "WET"]:
+            robustness[cond] = float(simulate_and_time(best_strategy, df, cond, drs_enabled,
+                                                      aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind))
+        # Per-segment details for UI
+        details = []
+        battery_before = MAX_BATTERY_MJ
+        for i in range(len(df)):
+            seg = df.iloc[i]
+            length_m = float(seg["length_m"])
+            baseline_kph = float(seg["baseline_speed_kph"])
+            final_kph = float(speeds[i])
+            time_s = length_m / (final_kph / 3.6) if final_kph > 0 else float('inf')
+            details.append({
+                "index": i + 1,
+                "action": label_map.get(best_strategy[i], 'COAST'),
+                "length_m": round(length_m, 2),
+                "baseline_speed_kph": round(baseline_kph, 1),
+                "final_speed_kph": round(final_kph, 1),
+                "time_s": round(time_s, 3),
+                "battery_before_mj": round(battery_before, 3),
+                "battery_after_mj": round(float(batteries[i]), 3),
+                "is_drs_zone": int(seg["is_drs_zone"]) == 1,
+                "is_braking_zone": int(seg["is_braking_zone"]) == 1,
+            })
+            battery_before = float(batteries[i])
         resp = {
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
             'image_path': image_path,
             'source': mode_tag,
-            'track_segments': track_segments
+            'track_segments': track_segments,
+            'segment_details': details,
+            'robustness': robustness
         }
         if policy_error:
             resp['note'] = f'Policy unavailable: {policy_error}. Used GA fallback.'
@@ -527,10 +654,14 @@ def predict_policy():
     try:
         data = request.json or {}
         track_condition = str(data.get('track_condition', 'DRY')).upper()
-        if track_condition not in {"DRY", "WET"}:
+        if track_condition not in {"DRY", "INTERMEDIATE", "WET"}:
             track_condition = "DRY"
         drs_enabled = bool(data.get('drs_enabled', True))
         event = str(data.get('event', 'Monza')) or 'Monza'
+        aero_downforce = float(data.get('aero_downforce', 0.5))
+        drag_coeff = float(data.get('drag_coeff', 1.0))
+        wind_speed_mps = float(data.get('wind_speed_mps', 0.0))
+        wind_is_headwind = bool(data.get('wind_is_headwind', True))
 
         # Build features from telemetry
         df = build_track_df(2024, event, 'R', n_segments=10)
@@ -544,7 +675,8 @@ def predict_policy():
         best_time = float(simulate_and_time(best_strategy, df, track_condition, drs_enabled))
 
         # Series for plotting
-        speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled)
+        speeds, batteries = simulate_full(best_strategy, df, track_condition, drs_enabled,
+                                          aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind)
         lengths = df["length_m"].astype(float).to_numpy()
         cum = np.concatenate(([0.0], np.cumsum(lengths)))
         x_mid = (cum[1:] + cum[:-1]) / 2.0
@@ -555,15 +687,43 @@ def predict_policy():
         track_map_path = create_track_map_image(event=event, year=2024, session_code='R',
                                                n_segments=len(df), strategy=best_strategy)
         track_segments = _build_track_segments_xy(event, 2024, 'R', len(df), best_strategy)
-
+        robustness = {}
+        for cond in ["DRY", "INTERMEDIATE", "WET"]:
+            robustness[cond] = float(simulate_and_time(best_strategy, df, cond, drs_enabled,
+                                                      aero_downforce, drag_coeff, wind_speed_mps, wind_is_headwind))
+        # Per-segment details
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
+        details = []
+        battery_before = MAX_BATTERY_MJ
+        for i in range(len(df)):
+            seg = df.iloc[i]
+            length_m = float(seg["length_m"])
+            baseline_kph = float(seg["baseline_speed_kph"])
+            final_kph = float(speeds[i])
+            time_s = length_m / (final_kph / 3.6) if final_kph > 0 else float('inf')
+            details.append({
+                "index": i + 1,
+                "action": label_map.get(best_strategy[i], 'COAST'),
+                "length_m": round(length_m, 2),
+                "baseline_speed_kph": round(baseline_kph, 1),
+                "final_speed_kph": round(final_kph, 1),
+                "time_s": round(time_s, 3),
+                "battery_before_mj": round(battery_before, 3),
+                "battery_after_mj": round(float(batteries[i]), 3),
+                "is_drs_zone": int(seg["is_drs_zone"]) == 1,
+                "is_braking_zone": int(seg["is_braking_zone"]) == 1,
+            })
+            battery_before = float(batteries[i])
+
         return jsonify({
             'source': 'policy',
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
             'image_path': image_path,
             'track_image_path': track_map_path,
-            'track_segments': track_segments
+            'track_segments': track_segments,
+            'segment_details': details,
+            'robustness': robustness
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
