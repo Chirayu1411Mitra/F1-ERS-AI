@@ -653,15 +653,16 @@
             aspect-ratio: 16 / 9;
             border-radius: 12px;
             overflow: hidden;
-            background: var(--color-slate-100);
+            background: #0f1318;
             border: 2px solid var(--color-slate-200);
+            min-height: 420px;
         }
 
         .track-map img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            opacity: 0.8;
+            object-fit: contain;
+            opacity: 1;
         }
 
         .track-overlay {
@@ -761,10 +762,25 @@
         .segment-path {
             fill: none;
             stroke-linecap: round;
-            stroke-width: 2.5;
-            transition: filter 0.15s, stroke-width 0.15s, opacity 0.15s;
+            stroke-width: 3;
+            transition: filter 0.15s, stroke-width 0.15s, opacity 0.3s;
             opacity: 0.95;
         }
+        .segment-outline {
+            fill: none;
+            stroke: #0b0b0b; /* thin black outline */
+            stroke-width: 4;
+            stroke-linecap: round;
+            opacity: 0.9;
+            pointer-events: none; /* don't block hover on the colored path */
+        }
+        /* Colored hover shadows per segment type */
+        .segment-path.coast:hover { filter: drop-shadow(0 0 6px rgba(30,58,138,0.7)); stroke-width: 4.2; }
+        .segment-path.deploy:hover { filter: drop-shadow(0 0 6px rgba(220,38,38,0.7)); stroke-width: 4.2; }
+        .segment-path.harvest:hover { filter: drop-shadow(0 0 6px rgba(22,163,74,0.7)); stroke-width: 4.2; }
+        /* Smooth map reveal */
+        .map-fade { opacity: 0; transition: opacity 300ms ease; }
+        .map-fade.show { opacity: 1; }
         .segment-path.coast { stroke: #1e3a8a; }
         .segment-path.deploy { stroke: #dc2626; }
         .segment-path.harvest { stroke: #16a34a; }
@@ -1158,16 +1174,51 @@
                                     </label>
                                     <select id="condition">
                                         <option value="dry" selected>Dry</option>
+                                        <option value="intermediate">Intermediate</option>
                                         <option value="wet">Wet</option>
-                                        <!-- <option value="qualifying-dry">Qualifying (Dry)</option>
-                                        <option value="qualifying-wet">Qualifying (Wet)</option> -->
-        </select>
+                                    </select>
                                 </div>
                             </div>
 
                             <div class="checkbox-group">
                                 <input type="checkbox" id="drs" checked>
                                 <label for="drs">Enable DRS (Drag Reduction System)</label>
+                            </div>
+
+                            <div class="grid grid-2" style="margin-top:1rem">
+                                <div class="form-group">
+                                    <label class="form-label">Downforce Level (0–1)</label>
+                                    <select id="aero-downforce">
+                                        <option value="0.3">Low (0.3)</option>
+                                        <option value="0.5" selected>Medium (0.5)</option>
+                                        <option value="0.8">High (0.8)</option>
+                                        <option value="1.0">Max (1.0)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Drag Coefficient (0.6–1.4)</label>
+                                    <select id="drag-coeff">
+                                        <option value="0.8">Low Drag (0.8)</option>
+                                        <option value="1.0" selected>Baseline (1.0)</option>
+                                        <option value="1.2">High Drag (1.2)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Wind Speed (m/s)</label>
+                                    <select id="wind-speed">
+                                        <option value="0">Calm (0)</option>
+                                        <option value="3">Breeze (3)</option>
+                                        <option value="6">Windy (6)</option>
+                                        <option value="10">Strong (10)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Wind Direction</label>
+                                    <select id="wind-direction">
+                                        <option value="head" selected>Headwind</option>
+                                        <option value="tail">Tailwind</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary" id="optimize-btn">
@@ -1339,6 +1390,15 @@
                         <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
+
+                <!-- Robustness across conditions -->
+                <div class="card">
+                    <div style="margin-bottom:1rem">
+                        <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem">Strategy Robustness</h3>
+                        <p class="subtitle" style="margin:0">Same optimized strategy evaluated under Dry, Intermediate, and Wet</p>
+                    </div>
+                    <div id="robustness-times" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;color:var(--color-slate-700)"></div>
+                </div>
             </div>
         </div>
 
@@ -1470,7 +1530,7 @@
         const ACTION_TO_CLASS = { HARVEST: 'harvest', DEPLOY: 'deploy', COAST: 'coast' };
 
         function toBackendCondition(v) {
-            const m = { dry: 'DRY', wet: 'WET', intermediate: 'WET', 'qualifying-dry': 'DRY', 'qualifying-wet': 'WET' };
+            const m = { dry: 'DRY', intermediate: 'INTERMEDIATE', wet: 'WET' };
             return m[v] || 'DRY';
         }
 
@@ -1513,19 +1573,33 @@
         }
 
         // Populate segment cards grid
-        function populateSegmentGrid(strategy) {
+        function populateSegmentGrid(strategy, segmentDetails) {
             const grid = document.getElementById('segment-grid');
             grid.innerHTML = '';
             strategy.forEach((label, idx) => {
                 const card = document.createElement('div');
                 card.className = 'segment-card';
                 const cls = ACTION_TO_CLASS[label] || 'coast';
+                const d = Array.isArray(segmentDetails) ? (segmentDetails[idx] || {}) : {};
+                const len = d.length_m != null ? `${d.length_m} m` : '—';
+                const base = d.baseline_speed_kph != null ? `${d.baseline_speed_kph} kph` : '—';
+                const fin = d.final_speed_kph != null ? `${d.final_speed_kph} kph` : '—';
+                const time = d.time_s != null ? `${d.time_s}s` : '—';
+                const batt = (d.battery_before_mj != null && d.battery_after_mj != null)
+                  ? `${d.battery_before_mj} → ${d.battery_after_mj} MJ`
+                  : '—';
+                const flags = [];
+                if (d.is_drs_zone) flags.push('DRS');
+                if (d.is_braking_zone) flags.push('Braking');
                 card.innerHTML = `
                     <p class="segment-number">Segment ${idx + 1}</p>
                     <span class="segment-badge ${cls}">${label}</span>
                     <div class="segment-stats">
-                        <p>—</p>
-                        <p>—</p>
+                        <p><strong>Length:</strong> ${len}</p>
+                        <p><strong>Speed:</strong> ${base} → ${fin}</p>
+                        <p><strong>Time:</strong> ${time}</p>
+                        <p><strong>Battery:</strong> ${batt}</p>
+                        <p><strong>Flags:</strong> ${flags.length ? flags.join(', ') : '—'}</p>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -1533,7 +1607,7 @@
         }
 
         // Apply results to UI
-        function renderResults(trackLabel, conditionLabel, drsEnabled, lapTimeStr, strategy, imagePath, track2dPath, segments) {
+        function renderResults(trackLabel, conditionLabel, drsEnabled, lapTimeStr, strategy, imagePath, track2dPath, segments, segmentDetails) {
             document.getElementById('lap-time-display').textContent = formatLapTime(lapTimeStr);
             document.getElementById('track-badge').textContent = trackLabel.split(' ').slice(-1)[0];
             document.getElementById('condition-badge').textContent = conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1);
@@ -1547,7 +1621,7 @@
             document.getElementById('coast-count').textContent = counts.COAST;
             document.getElementById('total-segments').textContent = strategy.length;
 
-            populateSegmentGrid(strategy);
+            populateSegmentGrid(strategy, segmentDetails);
             const img = document.getElementById('track-image');
             if (img && imagePath) {
                 img.src = `${imagePath}?t=${Date.now()}`;
@@ -1555,19 +1629,37 @@
             const svg = document.getElementById('track-2d-svg');
             if (svg) {
                 svg.innerHTML = '';
+                svg.classList.remove('show');
+                svg.classList.add('map-fade');
                 if (Array.isArray(segments) && segments.length) {
+                    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    g.setAttribute('id', 'segments-group');
+                    g.setAttribute('transform', 'translate(2,2) scale(0.96)');
                     const actionToClass = { 0: 'coast', 1: 'deploy', 2: 'harvest' };
                     segments.forEach((seg) => {
                         if (!Array.isArray(seg.points) || seg.points.length < 2) return;
                         const d = seg.points.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' ');
+                        // outline behind colored path
+                        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        outline.setAttribute('d', d);
+                        outline.setAttribute('class', 'segment-outline');
+                        g.appendChild(outline);
+                        // colored path on top
                         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                         path.setAttribute('d', d);
                         path.setAttribute('class', `segment-path ${actionToClass[seg.action] || 'coast'}`);
-                        svg.appendChild(path);
+                        g.appendChild(path);
                     });
+                    svg.appendChild(g);
+                    // trigger fade-in
+                    requestAnimationFrame(() => svg.classList.add('show'));
                 }
             }
         }
+
+        // No animation: stubs retained to avoid errors if referenced
+        function stopBlip() {}
+        async function startBlip(_) {}
 
         async function runPrediction(e) {
             e.preventDefault();
@@ -1580,6 +1672,10 @@
             const trackLabel = document.getElementById('track').options[document.getElementById('track').selectedIndex].text;
             const conditionValue = document.getElementById('condition').value;
             const drs = document.getElementById('drs').checked;
+            const aero = parseFloat(document.getElementById('aero-downforce').value);
+            const drag = parseFloat(document.getElementById('drag-coeff').value);
+            const wind = parseFloat(document.getElementById('wind-speed').value);
+            const windHead = document.getElementById('wind-direction').value === 'head';
 
             btn.disabled = true;
             btn.innerHTML = `
@@ -1596,9 +1692,15 @@
                 event: TRACK_VALUE_TO_EVENT[trackValue] || trackLabel,
                 track_condition: toBackendCondition(conditionValue),
                 drs_enabled: !!drs,
+                aero_downforce: aero,
+                drag_coeff: drag,
+                wind_speed_mps: wind,
+                wind_is_headwind: windHead,
             };
 
             try {
+                // Start blip animation in parallel using normalized event name
+                startBlip(payload.event);
                 const ctrl = new AbortController();
                 const TIMEOUT_MS = 120000; // allow up to 2 minutes (first run may download telemetry)
                 const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -1619,10 +1721,23 @@
 
                 progressFill.style.width = '80%';
                 const strategy = Array.isArray(data.strategy) ? data.strategy : [];
-                renderResults(trackLabel, conditionValue, drs, data.lap_time, strategy, data.image_path, data.track_image_path || data.track_map_path, data.track_segments);
+                renderResults(trackLabel, conditionValue, drs, data.lap_time, strategy, data.image_path, data.track_image_path || data.track_map_path, data.track_segments, data.segment_details);
+                // Robustness block
+                if (data.robustness) {
+                    const r = data.robustness;
+                    const el = document.getElementById('robustness-times');
+                    if (el) {
+                        el.innerHTML = `
+                            <div><strong>Dry:</strong> ${r.DRY ? r.DRY.toFixed(3) : '—'} s</div>
+                            <div><strong>Intermediate:</strong> ${r.INTERMEDIATE ? r.INTERMEDIATE.toFixed(3) : '—'} s</div>
+                            <div><strong>Wet:</strong> ${r.WET ? r.WET.toFixed(3) : '—'} s</div>
+                        `;
+                    }
+                }
 
                 progressFill.style.width = '100%';
                 setTimeout(() => {
+                    stopBlip();
                     btn.disabled = false;
                     btn.innerHTML = `
                         <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n<path d=\"M8 5v14l11-7z\"/>\n</svg>
@@ -1630,9 +1745,10 @@
                     progressContainer.classList.add('hidden');
                     progressFill.style.width = '0%';
                     resultsSection.classList.add('show');
-                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Do not auto-scroll to lap timer; keep user's current position
                 }, 300);
             } catch (err) {
+                stopBlip();
                 btn.disabled = false;
                 btn.innerHTML = `
                     <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n<path d=\"M8 5v14l11-7z\"/>\n</svg>
