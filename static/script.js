@@ -61,7 +61,7 @@ async function runOptimization() {
   downloadTrackBtn.disabled = true;
 
   try {
-    const response = await fetch("/run-ai", {
+    const response = await fetch("/predict-policy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ event: eventName, track_condition: trackCondition, drs_enabled: drsEnabled }),
