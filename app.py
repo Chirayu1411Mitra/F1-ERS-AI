@@ -124,6 +124,64 @@ def create_visualization(x_mid: np.ndarray, speed_kph: np.ndarray, battery_mj: n
     plt.close()
     return f"/static/{filename}"
 
+def _build_track_segments_xy(event: str, year: int, session_code: str, n_segments: int, strategy: list[int]):
+    """Return normalized SVG-like segments for interactive 2D track: list of {points:[(x,y)], action:int}.
+    Coordinates are normalized to [0,100] in both axes maintaining aspect ratio when rendered with viewBox 0 0 100 100.
+    """
+    if fastf1 is None:
+        return []
+    aliases = {
+        "BAHRAIN": "Bahrain",
+        "JEDDAH": "Saudi Arabian Grand Prix",
+        "MELBOURNE": "Australian Grand Prix",
+        "IMOLA": "Emilia Romagna Grand Prix",
+        "MONACO": "Monaco",
+        "BARCELONA": "Spanish Grand Prix",
+        "SILVERSTONE": "British Grand Prix",
+        "SPA": "Belgian Grand Prix",
+        "MONZA": "Italian Grand Prix",
+        "ABU DHABI": "Abu Dhabi Grand Prix",
+    }
+    try:
+        key = str(event).strip().upper()
+        event_norm = aliases.get(key, event)
+        session = fastf1.get_session(year, event_norm, session_code)
+        session.load()
+        lap = session.laps.pick_fastest()
+        tel = lap.get_telemetry().dropna(subset=["Distance"]).copy()
+        if ("X" not in tel.columns) or ("Y" not in tel.columns):
+            return []
+        dist = tel["Distance"].to_numpy()
+        x = tel["X"].to_numpy()
+        y = tel["Y"].to_numpy()
+        # Normalize to 0..100 box
+        xmin, xmax = float(np.min(x)), float(np.max(x))
+        ymin, ymax = float(np.min(y)), float(np.max(y))
+        xr = max(1e-6, xmax - xmin)
+        yr = max(1e-6, ymax - ymin)
+        # Build edges consistent with binning
+        edges = np.linspace(dist.min(), dist.max(), n_segments + 1)
+        segments = []
+        for i in range(n_segments):
+            l, r = edges[i], edges[i + 1]
+            mask = (dist >= l) & (dist < r if i < n_segments - 1 else dist <= r)
+            if not np.any(mask):
+                segments.append({"points": [], "action": int(strategy[i]) if i < len(strategy) else 0})
+                continue
+            # Downsample points to keep payload reasonable
+            idx = np.where(mask)[0]
+            step = max(1, len(idx) // 50)
+            idx = idx[::step]
+            pts = []
+            for j in idx:
+                px = (x[j] - xmin) / xr * 100.0
+                py = (y[j] - ymin) / yr * 100.0
+                pts.append([round(px, 2), round(py, 2)])
+            segments.append({"points": pts, "action": int(strategy[i]) if i < len(strategy) else 0})
+        return segments
+    except Exception:
+        return []
+
 def create_track_map_image(event: str, year: int, session_code: str, n_segments: int, strategy: list[int]) -> str:
     """Render a 2D track map using FastF1 XY telemetry and color segments by strategy.
     Returns static path to the saved PNG.
@@ -449,11 +507,13 @@ def run_ai():
             title_suffix=f"({mode_tag} • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
 
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
+        track_segments = _build_track_segments_xy(event, 2024, 'R', len(df), best_strategy)
         resp = {
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
             'image_path': image_path,
-            'source': mode_tag
+            'source': mode_tag,
+            'track_segments': track_segments
         }
         if policy_error:
             resp['note'] = f'Policy unavailable: {policy_error}. Used GA fallback.'
@@ -491,9 +551,10 @@ def predict_policy():
         image_path = create_visualization(x_mid, speeds, batteries,
             title_suffix=f"(Policy • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
 
-        # Create track map image (2D) with colored strategy segments
+        # Create 2D interactive data and image
         track_map_path = create_track_map_image(event=event, year=2024, session_code='R',
                                                n_segments=len(df), strategy=best_strategy)
+        track_segments = _build_track_segments_xy(event, 2024, 'R', len(df), best_strategy)
 
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
         return jsonify({
@@ -501,7 +562,8 @@ def predict_policy():
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
             'image_path': image_path,
-            'track_image_path': track_map_path
+            'track_image_path': track_map_path,
+            'track_segments': track_segments
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

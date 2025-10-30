@@ -1,81 +1,1652 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>🏎️ F1 ERS AI Optimizer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 ERS Optimizer - Team Pole Position</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primary: #dc2626;
+            --color-primary-dark: #991b1b;
+            --color-green: #16a34a;
+            --color-blue: #2563eb;
+            --color-slate-50: #f8fafc;
+            --color-slate-100: #f1f5f9;
+            --color-slate-200: #e2e8f0;
+            --color-slate-300: #cbd5e1;
+            --color-slate-500: #64748b;
+            --color-slate-600: #475569;
+            --color-slate-700: #334155;
+            --color-slate-800: #1e293b;
+            --color-slate-900: #0f172a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--color-slate-50);
+            color: var(--color-slate-900);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--color-slate-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #b91c1c 100%);
+            padding: 0.625rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-slate-900);
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--color-slate-500);
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .badge-live {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--color-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .badge-season {
+            background: white;
+            border-color: var(--color-slate-200);
+            color: var(--color-slate-600);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            margin-bottom: 2rem;
+        }
+
+        .tab-list {
+            display: flex;
+            gap: 0.25rem;
+            background: white;
+            border: 1px solid var(--color-slate-200);
+            border-radius: 8px;
+            padding: 0.25rem;
+            width: fit-content;
+        }
+
+        .tab-button {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--color-slate-600);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-button:hover {
+            background: var(--color-slate-100);
+        }
+
+        .tab-button.active {
+            background: var(--color-slate-900);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: 1px solid var(--color-slate-200);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-slate-900);
+            margin-bottom: 0.25rem;
+        }
+
+        .card .subtitle {
+            font-size: 0.875rem;
+            color: var(--color-slate-500);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .grid-lg-3 {
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 1024px) {
+            .grid-lg-3 {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--color-slate-700);
+            margin-bottom: 0.75rem;
+        }
+
+        .form-label svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--color-slate-400);
+        }
+
+        select {
+            width: 100%;
+            height: 48px;
+            padding: 0 1rem;
+            border: 1px solid var(--color-slate-300);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.875rem;
+            color: var(--color-slate-900);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            border-color: var(--color-slate-400);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--color-slate-900);
+        }
+
+        .checkbox-group label {
+            font-size: 0.875rem;
+            color: var(--color-slate-700);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            height: 56px;
+            padding: 0 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--color-primary), #b91c1c);
+            color: white;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--color-slate-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-primary);
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--color-slate-500);
+            text-align: center;
+            margin-top: 0.75rem;
+        }
+
+        /* Info Card */
+        .info-card {
+            background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-slate-800) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--color-slate-700);
+        }
+
+        .info-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card svg {
+            width: 20px;
+            height: 20px;
+            fill: #fca5a5;
+        }
+
+        .info-card p {
+            font-size: 0.875rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .info-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .info-list li {
+            display: flex;
+            align-items: start;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-list .bullet {
+            width: 6px;
+            height: 6px;
+            background: #fca5a5;
+            border-radius: 50%;
+            margin-top: 0.375rem;
+            flex-shrink: 0;
+        }
+
+        /* ERS Actions Card */
+        .ers-actions {
+            margin-top: 1.5rem;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .action-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .action-icon.harvest {
+            background: #dcfce7;
+        }
+
+        .action-icon.deploy {
+            background: #fee2e2;
+        }
+
+        .action-icon.coast {
+            background: #dbeafe;
+        }
+
+        .action-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .action-dot.harvest {
+            background: var(--color-green);
+        }
+
+        .action-dot.deploy {
+            background: var(--color-primary);
+        }
+
+        .action-dot.coast {
+            background: var(--color-blue);
+        }
+
+        .action-info h4 {
+            font-size: 0.875rem;
+            color: var(--color-slate-900);
+            margin-bottom: 0.125rem;
+        }
+
+        .action-info p {
+            font-size: 0.75rem;
+            color: var(--color-slate-500);
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            animation: fadeIn 0.7s;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .lap-time-hero {
+            background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-slate-800) 50%, var(--color-slate-900) 100%);
+            border: 1px solid var(--color-slate-700);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .lap-time-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 50%;
+            bottom: 0;
+            background: linear-gradient(to right, rgba(220, 38, 38, 0.1), transparent);
+        }
+
+        .lap-time-hero .content {
+            position: relative;
+        }
+
+        .lap-time-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .lap-time-label svg {
+            width: 24px;
+            height: 24px;
+            fill: #fca5a5;
+        }
+
+        .lap-time {
+            font-size: 4rem;
+            font-weight: 300;
+            color: white;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.5rem;
+        }
+
+        .lap-time-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .lap-time-badges .badge {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--color-slate-600);
+            color: #cbd5e1;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid var(--color-slate-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .stat-card.harvest {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-color: #bbf7d0;
+        }
+
+        .stat-card.deploy {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border-color: #fecaca;
+        }
+
+        .stat-card.coast {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #bfdbfe;
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-header p {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stat-card.harvest .stat-header p {
+            color: #15803d;
+        }
+
+        .stat-card.deploy .stat-header p {
+            color: #991b1b;
+        }
+
+        .stat-card.coast .stat-header p {
+            color: #1e40af;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .stat-card.harvest .stat-value {
+            color: #14532d;
+        }
+
+        .stat-card.deploy .stat-value {
+            color: #7f1d1d;
+        }
+
+        .stat-card.coast .stat-value {
+            color: #1e3a8a;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.harvest .stat-label {
+            color: var(--color-green);
+        }
+
+        .stat-card.deploy .stat-label {
+            color: var(--color-primary);
+        }
+
+        .stat-card.coast .stat-label {
+            color: var(--color-blue);
+        }
+
+        /* Track Map */
+        .track-map {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--color-slate-100);
+            border: 2px solid var(--color-slate-200);
+        }
+
+        .track-map img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.8;
+        }
+
+        .track-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, 
+                rgba(15, 23, 42, 0.3),
+                rgba(15, 23, 42, 0.2),
+                rgba(15, 23, 42, 0.4));
+        }
+
+        .segment-marker {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .segment-marker:hover {
+            transform: translate(-50%, -50%) scale(1.25);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .segment-marker.harvest {
+            background: var(--color-green);
+            border-color: #15803d;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.5);
+        }
+
+        .segment-marker.deploy {
+            background: var(--color-primary);
+            border-color: var(--color-primary-dark);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+        }
+
+        .segment-marker.coast {
+            background: var(--color-blue);
+            border-color: #1e40af;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-legend p {
+            font-size: 0.75rem;
+            color: var(--color-slate-600);
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-item span {
+            font-size: 0.75rem;
+            color: var(--color-slate-700);
+        }
+
+        /* Interactive SVG segments */
+        .segment-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .segment-path {
+            fill: none;
+            stroke-linecap: round;
+            stroke-width: 2.5;
+            transition: filter 0.15s, stroke-width 0.15s, opacity 0.15s;
+            opacity: 0.95;
+        }
+        .segment-path.coast { stroke: #1e3a8a; }
+        .segment-path.deploy { stroke: #dc2626; }
+        .segment-path.harvest { stroke: #16a34a; }
+        .segment-path:hover {
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));
+            stroke-width: 4.5;
+            opacity: 1;
+        }
+
+        /* Segment Grid */
+        .segment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .segment-card {
+            background: var(--color-slate-50);
+            border: 1px solid var(--color-slate-200);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .segment-card:hover {
+            border-color: var(--color-slate-300);
+        }
+
+        .segment-number {
+            font-size: 0.75rem;
+            color: var(--color-slate-500);
+            margin-bottom: 0.5rem;
+        }
+
+        .segment-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+
+        .segment-badge.harvest {
+            background: var(--color-green);
+        }
+
+        .segment-badge.deploy {
+            background: var(--color-primary);
+        }
+
+        .segment-badge.coast {
+            background: var(--color-blue);
+        }
+
+        .segment-stats {
+            padding-top: 0.5rem;
+        }
+
+        .segment-stats p {
+            font-size: 0.75rem;
+            color: var(--color-slate-600);
+            margin-bottom: 0.25rem;
+        }
+
+        .segment-stats p:last-child {
+            color: var(--color-slate-500);
+        }
+
+        /* Team Section */
+        .team-hero {
+            background: linear-gradient(135deg, var(--color-slate-900) 0%, #7f1d1d 50%, var(--color-slate-900) 100%);
+            border: 1px solid var(--color-slate-700);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .team-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top, rgba(220, 38, 38, 0.2), transparent);
+        }
+
+        .team-hero .content {
+            position: relative;
+        }
+
+        .team-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--color-primary), #b91c1c);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+        }
+
+        .team-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        .team-hero h2 {
+            font-size: 3rem;
+            color: white;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .team-hero p {
+            font-size: 1.25rem;
+            color: #cbd5e1;
+            max-width: 48rem;
+            margin: 0 auto 2rem;
+        }
+
+        .team-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .team-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .team-badge.primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .team-badge.outline {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-slate-600);
+            color: #cbd5e1;
+        }
+
+        .team-badge svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Mission Cards */
+        .mission-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .mission-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .mission-card {
+            background: white;
+            border: 1px solid var(--color-slate-200);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .mission-card:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .mission-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .mission-icon.blue {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        }
+
+        .mission-icon.red {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+        }
+
+        .mission-icon.purple {
+            background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+        }
+
+        .mission-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .mission-icon.blue svg {
+            fill: #1e40af;
+        }
+
+        .mission-icon.red svg {
+            fill: #991b1b;
+        }
+
+        .mission-icon.purple svg {
+            fill: #7c3aed;
+        }
+
+        .mission-card h3 {
+            font-size: 1.125rem;
+            color: var(--color-slate-900);
+            margin-bottom: 0.75rem;
+        }
+
+        .mission-card p {
+            font-size: 0.875rem;
+            color: var(--color-slate-600);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--color-slate-200);
+            background: white;
+            margin-top: 5rem;
+        }
+
+        .footer-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-container p {
+            font-size: 0.875rem;
+            color: var(--color-slate-500);
+        }
+
+        .footer-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .lap-time {
+                font-size: 2.5rem;
+            }
+
+            .team-hero h2 {
+                font-size: 2rem;
+            }
+
+            .team-hero p {
+                font-size: 1rem;
+            }
+
+            .segment-grid {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <header class="header">
-        <h1>🏁 F1 ERS Deployment Optimizer</h1>
-        <p class="subtitle">Find the fastest ERS plan for a real 2024 race lap.</p>
-      </header>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>F1 ERS Optimizer</h1>
+                    <p>Powered by Advanced AI Analytics</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge badge-live">
+                    <span class="pulse-dot"></span>
+                    Live
+                </span>
+                <span class="badge badge-season">2024 Season</span>
+            </div>
+        </div>
+    </header>
 
-      <div class="controls">
-        <label>Track:</label>
-        <select id="trackEvent">
-          <option value="Bahrain">Bahrain</option>
-          <option value="Jeddah">Jeddah</option>
-          <option value="Melbourne">Melbourne</option>
-          <option value="Imola">Imola</option>
-          <option value="Monaco">Monaco</option>
-          <option value="Barcelona">Barcelona</option>
-          <option value="Silverstone">Silverstone</option>
-          <option value="Spa">Spa</option>
-          <option value="Monza" selected>Monza</option>
-          <option value="Abu Dhabi">Abu Dhabi</option>
+    <!-- Main Content -->
+    <main>
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab-list">
+                <button class="tab-button active" onclick="switchTab('optimizer')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px">
+                        <path d="M12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-8c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                    </svg>
+                    Optimizer
+                </button>
+                <button class="tab-button" onclick="switchTab('team')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    Team
+                </button>
+            </div>
+        </div>
+
+        <!-- Optimizer Tab -->
+        <div id="optimizer-tab" class="tab-content active">
+            <div class="grid grid-lg-3">
+                <!-- Configuration Panel -->
+                <div>
+                    <div class="card">
+                        <h2>Configuration</h2>
+                        <p class="subtitle">Select track and conditions to optimize ERS deployment strategy</p>
+
+                        <form id="optimizer-form">
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                            <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
+                                        </svg>
+                                        Circuit
+                                    </label>
+                                    <select id="track">
+                                        <option value="bahrain">Bahrain International Circuit</option>
+                                        <option value="jeddah">Jeddah Corniche Circuit</option>
+                                        <option value="melbourne">Albert Park Circuit</option>
+                                        <option value="imola">Autodromo Enzo e Dino Ferrari (Imola)</option>
+                                        <option value="monaco">Circuit de Monaco</option>
+                                        <option value="barcelona">Circuit de Barcelona-Catalunya</option>
+                                        <option value="silverstone">Silverstone Circuit</option>
+                                        <option value="spa">Circuit de Spa-Francorchamps</option>
+                                        <option value="monza" selected>Autodromo Nazionale di Monza</option>
+                                        <option value="abudhabi">Yas Marina Circuit</option>
+                                        <option value="montreal">Circuit Gilles Villeneuve (Canada)</option>
+                                        <option value="baku">Baku City Circuit</option>
+                                        <option value="cota">Circuit of the Americas (USA)</option>
+                                        <option value="mexico">Autódromo Hermanos Rodríguez</option>
+                                        <option value="saopaulo">Autódromo José Carlos Pace (São Paulo)</option>
+                                        <option value="suzuka">Suzuka International Racing Course</option>
+                                        <option value="hungaroring">Hungaroring</option>
+                                        <option value="redbullring">Red Bull Ring (Austria)</option>
+                                        <option value="qatar">Losail International Circuit (Qatar)</option>
+                                        <option value="miami">Miami International Autodrome</option>
+                                        <option value="zandvoort">Circuit Zandvoort (Netherlands)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                        </svg>
+                                        Track Condition
+                                    </label>
+                                    <select id="condition">
+                                        <option value="dry" selected>Dry</option>
+                                        <option value="wet">Wet</option>
+                                        <!-- <option value="qualifying-dry">Qualifying (Dry)</option>
+                                        <option value="qualifying-wet">Qualifying (Wet)</option> -->
         </select>
-        <label>Track Condition:</label>
-        <select id="trackCondition">
-          <option value="DRY">Dry</option>
-          <option value="WET">Wet</option>
-        </select>
+                                </div>
+                            </div>
 
-        <label>Enable DRS:</label>
-        <input type="checkbox" id="drsToggle" checked />
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="drs" checked>
+                                <label for="drs">Enable DRS (Drag Reduction System)</label>
+                            </div>
 
-        <button id="runBtn">Run Optimization</button>
+                            <button type="submit" class="btn btn-primary" id="optimize-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                                Run Optimization
+                            </button>
+
+                            <div id="progress-container" class="progress-container hidden">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progress-fill"></div>
+                                </div>
+                                <p class="progress-text">Running genetic algorithm optimization... This may take 10-30 seconds</p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 2D Track Layout -->
+                <div class="card" style="margin-top:1.5rem">
+                    <div style="margin-bottom:1.5rem">
+                        <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px;fill:var(--color-slate-700)">
+                                <path d="M3 13h2v-2H3v2zm4 0h2V7H7v6zm4 0h2V4h-2v9zm4 0h2V9h-2v4zm4 0h2V6h-2v7z"/>
+                            </svg>
+                            2D Track Layout (ERS Zones)
+                        </h3>
+                        <p class="subtitle" style="margin:0">Accurate track trace with COAST (blue), DEPLOY (red), HARVEST (green)</p>
+                    </div>
+
+                    <div class="track-map" style="background:white;border:1px solid var(--color-slate-200)">
+                        <svg id="track-2d-svg" class="segment-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+                    </div>
+                </div>
+
+                <!-- Info Sidebar -->
+                <div>
+                    <div class="info-card">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            How It Works
+                        </h3>
+                        <p>Our AI-powered optimizer uses genetic algorithms to determine the optimal ERS deployment strategy across all track segments.</p>
+                        <ul class="info-list">
+                            <li><span class="bullet"></span>Analyzes 10 track segments</li>
+                            <li><span class="bullet"></span>Considers HARVEST, DEPLOY, COAST actions</li>
+                            <li><span class="bullet"></span>Optimizes for fastest lap time</li>
+                        </ul>
+                    </div>
+
+                    <div class="card ers-actions">
+                        <h3 style="font-size:1rem;margin-bottom:1rem;">ERS Actions</h3>
+                        <div class="action-item">
+                            <div class="action-icon harvest">
+                                <div class="action-dot harvest"></div>
+                            </div>
+                            <div class="action-info">
+                                <h4>HARVEST</h4>
+                                <p>Regenerate energy from braking</p>
+                            </div>
+                        </div>
+                        <div class="action-item">
+                            <div class="action-icon deploy">
+                                <div class="action-dot deploy"></div>
+                            </div>
+                            <div class="action-info">
+                                <h4>DEPLOY</h4>
+                                <p>Release stored energy for boost</p>
+                            </div>
+                        </div>
+                        <div class="action-item">
+                            <div class="action-icon coast">
+                                <div class="action-dot coast"></div>
+                            </div>
+                            <div class="action-info">
+                                <h4>COAST</h4>
+                                <p>Neutral energy management</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="results-section">
+                <!-- Lap Time Hero -->
+                <div class="lap-time-hero">
+                    <div class="content">
+                        <div class="lap-time-label">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                <path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                            </svg>
+                            Optimal Lap Time
+                        </div>
+                        <div class="lap-time" id="lap-time-display">—</div>
+                        <div class="lap-time-badges">
+                            <span class="badge" id="track-badge">Monza</span>
+                            <span class="badge" id="condition-badge">Dry</span>
+                            <span class="badge" id="drs-badge">DRS Enabled</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <p>Total Segments</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor">
+                                <path d="M9 17l3-2.94c-.39-.04-.68-.06-1-.06-2.67 0-8 1.34-8 4v2h9l-3-3zm2-5c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="total-segments">—</div>
+                    </div>
+                    <div class="stat-card harvest">
+                        <div class="stat-header">
+                            <p>Harvest</p>
+                            <div class="action-dot harvest" style="width:12px;height:12px"></div>
+                        </div>
+                        <div class="stat-value" id="harvest-count">—</div>
+                        <div class="stat-label">Energy regeneration</div>
+                    </div>
+                    <div class="stat-card deploy">
+                        <div class="stat-header">
+                            <p>Deploy</p>
+                            <div class="action-dot deploy" style="width:12px;height:12px"></div>
+                        </div>
+                        <div class="stat-value" id="deploy-count">—</div>
+                        <div class="stat-label">Power boost</div>
+                    </div>
+                    <div class="stat-card coast">
+                        <div class="stat-header">
+                            <p>Coast</p>
+                            <div class="action-dot coast" style="width:12px;height:12px"></div>
+                        </div>
+                        <div class="stat-value" id="coast-count">—</div>
+                        <div class="stat-label">Neutral mode</div>
+                    </div>
+                </div>
+
+                <!-- Track Map (server-rendered image) -->
+                <div class="card">
+                    <div style="margin-bottom:1.5rem">
+                        <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px;fill:var(--color-slate-700)">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            Track Strategy Map
+                        </h3>
+                        <p class="subtitle" style="margin:0">Model-rendered plot of Speed and Battery across segments</p>
+                    </div>
+
+                    <div class="track-map" style="display:flex;align-items:center;justify-content:center;background:white;border:1px solid var(--color-slate-200)">
+                        <img id="track-image" src="" alt="Strategy Plot" style="max-width:100%;max-height:100%;object-fit:contain">
+                    </div>
+                </div>
+
+                <!-- Segment Grid -->
+                <div class="card">
+                    <div style="margin-bottom:1.5rem">
+                        <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem">Segment-by-Segment Strategy</h3>
+                        <p class="subtitle" style="margin:0">Detailed ERS action plan for each track segment</p>
+                    </div>
+
+                    <div class="segment-grid" id="segment-grid">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Tab -->
+        <div id="team-tab" class="tab-content">
+            <!-- Team Hero -->
+            <div class="team-hero">
+                <div class="content">
+                    <div class="team-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2zm0-6h2v4h-2z"/>
+                        </svg>
+                    </div>
+                    <h2>Team Pole Position</h2>
+                    <p>Engineering the future of Formula 1 performance optimization through cutting-edge AI technology</p>
+                    <div class="team-badges">
+                        <span class="team-badge primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99z"/>
+                            </svg>
+                            Hackathon 2024
+                        </span>
+                        <span class="team-badge outline">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                            </svg>
+                            AI Innovators
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Grid -->
+            <div class="mission-grid">
+                <div class="mission-card">
+                    <div class="mission-icon blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                    </div>
+                    <h3>Our Mission</h3>
+                    <p>Revolutionize F1 ERS optimization through intelligent AI-driven strategies that maximize performance and efficiency on every lap.</p>
       </div>
 
-        <div class="legend">
-          <span class="pill pill-coast">COAST</span>
-          <span class="pill pill-deploy">DEPLOY</span>
-          <span class="pill pill-harvest">HARVEST</span>
-        </div>
+                <div class="mission-card">
+                    <div class="mission-icon red">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
+                        </svg>
+                    </div>
+                    <h3>Our Technology</h3>
+                    <p>Leveraging advanced genetic algorithms and machine learning to analyze track segments and deliver optimal energy deployment strategies.</p>
+                </div>
 
-        <div class="table-wrap">
-          <table class="segments" id="segmentsTable" aria-label="Per-segment actions">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <figure class="figure">
-          <img id="lapImage" src="" alt="Optimal lap: speed and battery visualization" />
-          <figcaption>
-            <button id="downloadBtn" class="secondary" disabled>Download Chart</button>
-          </figcaption>
-        </figure>
-
-        <figure class="figure">
-          <img id="trackImage" src="" alt="2D track map with colored ERS zones" />
-          <figcaption>
-            <button id="downloadTrackBtn" class="secondary" disabled>Download Track Map</button>
-          </figcaption>
-        </figure>
-      </section>
+                <div class="mission-card">
+                    <div class="mission-icon purple">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <h3>Our Vision</h3>
+                    <p>Making advanced F1 analytics accessible to everyone - from professional teams to passionate motorsport enthusiasts worldwide.</p>
+      </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card" style="background:linear-gradient(135deg,var(--color-slate-900),var(--color-slate-800));border-color:var(--color-slate-700)">
+                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">10</p>
+                    <p style="color:#94a3b8;font-size:0.875rem">Track Segments</p>
+                </div>
+                <div class="stat-card deploy">
+                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">3</p>
+                    <p style="color:#fecaca;font-size:0.875rem">ERS Actions</p>
+                </div>
+                <div class="stat-card coast">
+                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">7+</p>
+                    <p style="color:#bfdbfe;font-size:0.875rem">F1 Circuits</p>
+                </div>
+                <div class="stat-card harvest">
+                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">2024</p>
+                    <p style="color:#bbf7d0;font-size:0.875rem">Season Data</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <p>© 2025 Team Pole Position</p>
+            <div class="footer-badge">
+                <span class="badge badge-season" style="display:flex;align-items:center;gap:0.25rem">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor">
+                        <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99z"/>
+                    </svg>
+                    Pole Position
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- Config ---
+        const TRACK_VALUE_TO_EVENT = {
+            bahrain: 'Bahrain',
+            jeddah: 'Saudi Arabian Grand Prix',
+            melbourne: 'Australian Grand Prix',
+            imola: 'Emilia Romagna Grand Prix',
+            monaco: 'Monaco',
+            barcelona: 'Spanish Grand Prix',
+            silverstone: 'British Grand Prix',
+            spa: 'Belgian Grand Prix',
+            monza: 'Italian Grand Prix',
+            abudhabi: 'Abu Dhabi Grand Prix',
+            montreal: 'Canadian Grand Prix',
+            baku: 'Azerbaijan Grand Prix',
+            cota: 'United States Grand Prix',
+            mexico: 'Mexico City Grand Prix',
+            saopaulo: 'São Paulo Grand Prix',
+            suzuka: 'Japanese Grand Prix',
+            hungaroring: 'Hungarian Grand Prix',
+            redbullring: 'Austrian Grand Prix',
+            qatar: 'Qatar Grand Prix',
+            miami: 'Miami Grand Prix',
+            zandvoort: 'Dutch Grand Prix',
+        };
+
+        const ACTION_TO_CLASS = { HARVEST: 'harvest', DEPLOY: 'deploy', COAST: 'coast' };
+
+        function toBackendCondition(v) {
+            const m = { dry: 'DRY', wet: 'WET', intermediate: 'WET', 'qualifying-dry': 'DRY', 'qualifying-wet': 'WET' };
+            return m[v] || 'DRY';
+        }
+
+        function formatLapTime(secStr) {
+            const s = parseFloat(secStr);
+            if (!isFinite(s)) return secStr;
+            const m = Math.floor(s / 60);
+            const rem = s - m * 60;
+            return `${m}:${rem.toFixed(3).padStart(6, '0')}`;
+        }
+
+        // Tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            event.target.closest('.tab-button').classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        // Update segment markers (colored dots on map) placed in an ellipse
+        function updateSegmentMarkers(strategy) {
+            const container = document.getElementById('markers');
+            container.innerHTML = '';
+            const n = strategy.length;
+            const centerX = 50, centerY = 50; // percent
+            const rx = 35, ry = 40; // ellipse radii in percent
+            for (let i = 0; i < n; i++) {
+                const label = strategy[i];
+                const cls = ACTION_TO_CLASS[label] || 'coast';
+                const angle = (Math.PI * 2) * (i / n) - Math.PI / 2; // start at top
+                const left = centerX + rx * Math.cos(angle);
+                const top = centerY + ry * Math.sin(angle);
+                const el = document.createElement('div');
+                el.className = `segment-marker ${cls}`;
+                el.style.left = `${left}%`;
+                el.style.top = `${top}%`;
+                el.textContent = (i + 1);
+                container.appendChild(el);
+            }
+        }
+
+        // Populate segment cards grid
+        function populateSegmentGrid(strategy) {
+            const grid = document.getElementById('segment-grid');
+            grid.innerHTML = '';
+            strategy.forEach((label, idx) => {
+                const card = document.createElement('div');
+                card.className = 'segment-card';
+                const cls = ACTION_TO_CLASS[label] || 'coast';
+                card.innerHTML = `
+                    <p class="segment-number">Segment ${idx + 1}</p>
+                    <span class="segment-badge ${cls}">${label}</span>
+                    <div class="segment-stats">
+                        <p>—</p>
+                        <p>—</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Apply results to UI
+        function renderResults(trackLabel, conditionLabel, drsEnabled, lapTimeStr, strategy, imagePath, track2dPath, segments) {
+            document.getElementById('lap-time-display').textContent = formatLapTime(lapTimeStr);
+            document.getElementById('track-badge').textContent = trackLabel.split(' ').slice(-1)[0];
+            document.getElementById('condition-badge').textContent = conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1);
+            document.getElementById('drs-badge').textContent = drsEnabled ? 'DRS Enabled' : 'DRS Disabled';
+
+            // Counts and totals
+            const counts = { HARVEST: 0, DEPLOY: 0, COAST: 0 };
+            strategy.forEach(l => { if (counts[l] !== undefined) counts[l]++; });
+            document.getElementById('harvest-count').textContent = counts.HARVEST;
+            document.getElementById('deploy-count').textContent = counts.DEPLOY;
+            document.getElementById('coast-count').textContent = counts.COAST;
+            document.getElementById('total-segments').textContent = strategy.length;
+
+            populateSegmentGrid(strategy);
+            const img = document.getElementById('track-image');
+            if (img && imagePath) {
+                img.src = `${imagePath}?t=${Date.now()}`;
+            }
+            const svg = document.getElementById('track-2d-svg');
+            if (svg) {
+                svg.innerHTML = '';
+                if (Array.isArray(segments) && segments.length) {
+                    const actionToClass = { 0: 'coast', 1: 'deploy', 2: 'harvest' };
+                    segments.forEach((seg) => {
+                        if (!Array.isArray(seg.points) || seg.points.length < 2) return;
+                        const d = seg.points.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' ');
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.setAttribute('d', d);
+                        path.setAttribute('class', `segment-path ${actionToClass[seg.action] || 'coast'}`);
+                        svg.appendChild(path);
+                    });
+                }
+            }
+        }
+
+        async function runPrediction(e) {
+            e.preventDefault();
+            const btn = document.getElementById('optimize-btn');
+            const progressContainer = document.getElementById('progress-container');
+            const progressFill = document.getElementById('progress-fill');
+            const resultsSection = document.getElementById('results-section');
+
+            const trackValue = document.getElementById('track').value;
+            const trackLabel = document.getElementById('track').options[document.getElementById('track').selectedIndex].text;
+            const conditionValue = document.getElementById('condition').value;
+            const drs = document.getElementById('drs').checked;
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="spinner">
+                    <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                </svg>
+                Running Prediction...
+            `;
+            progressContainer.classList.remove('hidden');
+            resultsSection.classList.remove('show');
+            progressFill.style.width = '25%';
+
+            const payload = {
+                event: TRACK_VALUE_TO_EVENT[trackValue] || trackLabel,
+                track_condition: toBackendCondition(conditionValue),
+                drs_enabled: !!drs,
+            };
+
+            try {
+                const ctrl = new AbortController();
+                const TIMEOUT_MS = 120000; // allow up to 2 minutes (first run may download telemetry)
+                const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+                const res = await fetch('/predict-policy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: ctrl.signal,
+                });
+                clearTimeout(timer);
+
+                let data = null;
+                try { data = await res.json(); } catch (e) {}
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+                    throw new Error(msg);
+                }
+
+                progressFill.style.width = '80%';
+                const strategy = Array.isArray(data.strategy) ? data.strategy : [];
+                renderResults(trackLabel, conditionValue, drs, data.lap_time, strategy, data.image_path, data.track_image_path || data.track_map_path, data.track_segments);
+
+                progressFill.style.width = '100%';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n<path d=\"M8 5v14l11-7z\"/>\n</svg>
+                        Run Optimization`;
+                    progressContainer.classList.add('hidden');
+                    progressFill.style.width = '0%';
+                    resultsSection.classList.add('show');
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n<path d=\"M8 5v14l11-7z\"/>\n</svg>
+                    Run Optimization`;
+                progressContainer.classList.add('hidden');
+                progressFill.style.width = '0%';
+                const msg = err && (err.name === 'AbortError' || /aborted/i.test(err.message))
+                  ? 'Request timed out (up to 120s). The server may be downloading telemetry for the first time. Please try again.'
+                  : `An error occurred: ${err.message}`;
+                alert(msg);
+            }
+        }
+
+        document.getElementById('optimizer-form').addEventListener('submit', runPrediction);
+    </script>
   </body>
-  </html>
+</html>
