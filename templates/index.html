@@ -2,55 +2,110 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>🏎️ F1 ERS AI Optimizer</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
     <div class="container">
-      <h1>🏁 F1 ERS Deployment Optimizer</h1>
+      <header class="header">
+        <h1>🏁 F1 ERS Deployment Optimizer</h1>
+        <p class="subtitle">Find the fastest ERS plan for a real 2024 race lap.</p>
+      </header>
 
-      <div class="controls">
-        <label>Track:</label>
-        <select id="trackEvent">
-          <option value="Bahrain">Bahrain</option>
-          <option value="Jeddah">Jeddah</option>
-          <option value="Melbourne">Melbourne</option>
-          <option value="Imola">Imola</option>
-          <option value="Monaco">Monaco</option>
-          <option value="Barcelona">Barcelona</option>
-          <option value="Silverstone">Silverstone</option>
-          <option value="Spa">Spa</option>
-          <option value="Monza" selected>Monza</option>
-          <option value="Abu Dhabi">Abu Dhabi</option>
-        </select>
-        <label>Track Condition:</label>
-        <select id="trackCondition">
-          <option value="DRY">Dry</option>
-          <option value="WET">Wet</option>
-        </select>
+      <section class="controls" aria-label="Configuration">
+        <div class="field">
+          <label for="trackEvent">Track</label>
+          <select id="trackEvent">
+            <option value="Bahrain">Bahrain</option>
+            <option value="Jeddah">Jeddah</option>
+            <option value="Melbourne">Melbourne</option>
+            <option value="Imola">Imola</option>
+            <option value="Monaco">Monaco</option>
+            <option value="Barcelona">Barcelona</option>
+            <option value="Silverstone">Silverstone</option>
+            <option value="Spa">Spa</option>
+            <option value="Monza" selected>Monza</option>
+            <option value="Abu Dhabi">Abu Dhabi</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="trackCondition">Track Condition</label>
+          <select id="trackCondition">
+            <option value="DRY">Dry</option>
+            <option value="WET">Wet</option>
+          </select>
+        </div>
+        <div class="field inline">
+          <label for="drsToggle">Enable DRS</label>
+          <input type="checkbox" id="drsToggle" checked />
+        </div>
+        <div class="actions">
+          <button id="runBtn" class="primary">Run Optimization</button>
+        </div>
+      </section>
 
-        <label>Enable DRS:</label>
-        <input type="checkbox" id="drsToggle" checked />
+      <section id="loader" class="loader hidden" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <div>
+          <strong>Running AI Optimization...</strong>
+          <div class="muted">This can take ~10–30 seconds for GA to converge.</div>
+        </div>
+      </section>
 
-        <button id="runBtn">Run Optimization</button>
-      </div>
+      <section id="errorPanel" class="error hidden" role="alert"></section>
 
-      <div id="loader" class="hidden">Running AI Optimization... ⏳</div>
+      <section id="results" class="results hidden" aria-label="Results">
+        <div class="badges" id="contextBadges"></div>
 
-      <div id="results" class="hidden">
-        <h2>Results</h2>
-        <p>
-          <strong>Fastest Lap Time:</strong> <span id="lapTime"></span> seconds
-        </p>
-        <p><strong>Best Strategy:</strong></p>
-        <pre id="strategyOutput"></pre>
-        <img id="lapImage" src="" alt="Optimal Lap Visualization" />
-      </div>
+        <div class="cards">
+          <div class="card">
+            <div class="card-title">Fastest Lap Time</div>
+            <div class="lap-time" id="lapTime">--:--.---</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Strategy Summary</div>
+            <ul class="summary" id="strategySummary"></ul>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span class="pill pill-coast">COAST</span>
+          <span class="pill pill-deploy">DEPLOY</span>
+          <span class="pill pill-harvest">HARVEST</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="segments" id="segmentsTable" aria-label="Per-segment actions">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <figure class="figure">
+          <img id="lapImage" src="" alt="Optimal lap: speed and battery visualization" />
+          <figcaption>
+            <button id="downloadBtn" class="secondary" disabled>Download Chart</button>
+          </figcaption>
+        </figure>
+
+        <figure class="figure">
+          <img id="trackImage" src="" alt="2D track map with colored ERS zones" />
+          <figcaption>
+            <button id="downloadTrackBtn" class="secondary" disabled>Download Track Map</button>
+          </figcaption>
+        </figure>
+      </section>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
   </body>
-</html>
+  </html>

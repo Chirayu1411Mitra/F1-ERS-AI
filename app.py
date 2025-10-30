@@ -5,6 +5,8 @@ from datetime import datetime
 import matplotlib
 matplotlib.use("Agg")  # headless backend for server-side image generation
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as patheffects
+from matplotlib import colors as mcolors
 import os
 import sys
 import subprocess
@@ -119,6 +121,81 @@ def create_visualization(x_mid: np.ndarray, speed_kph: np.ndarray, battery_mj: n
     os.makedirs(static_dir, exist_ok=True)
     filename = f"lap_viz_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(os.path.join(static_dir, filename), bbox_inches='tight')
+    plt.close()
+    return f"/static/{filename}"
+
+def create_track_map_image(event: str, year: int, session_code: str, n_segments: int, strategy: list[int]) -> str:
+    """Render a 2D track map using FastF1 XY telemetry and color segments by strategy.
+    Returns static path to the saved PNG.
+    """
+    if fastf1 is None:
+        raise RuntimeError("fastf1 is not installed in this environment.")
+    # Normalize event as in build_track_df
+    aliases = {
+        "BAHRAIN": "Bahrain",
+        "JEDDAH": "Saudi Arabian Grand Prix",
+        "MELBOURNE": "Australian Grand Prix",
+        "IMOLA": "Emilia Romagna Grand Prix",
+        "MONACO": "Monaco",
+        "BARCELONA": "Spanish Grand Prix",
+        "SILVERSTONE": "British Grand Prix",
+        "SPA": "Belgian Grand Prix",
+        "MONZA": "Italian Grand Prix",
+        "ABU DHABI": "Abu Dhabi Grand Prix",
+    }
+    key = str(event).strip().upper()
+    event_norm = aliases.get(key, event)
+    session = fastf1.get_session(year, event_norm, session_code)
+    session.load()
+    lap = session.laps.pick_fastest()
+    tel = lap.get_telemetry().dropna(subset=["Distance"]).copy()
+    # Some datasets may not include X/Y; guard gracefully
+    if ("X" not in tel.columns) or ("Y" not in tel.columns):
+        raise RuntimeError("Telemetry does not include XY coordinates for track map.")
+
+    dist = tel["Distance"].to_numpy()
+    x = tel["X"].to_numpy()
+    y = tel["Y"].to_numpy()
+
+    # Build edges consistent with build_track_df binning
+    edges = np.linspace(dist.min(), dist.max(), n_segments + 1)
+
+    # Colors for actions
+    color_map = {
+        0: "#5b6b7c",  # COAST
+        1: "#e74c3c",  # DEPLOY
+        2: "#27ae60",  # HARVEST
+    }
+
+    fig = plt.figure(figsize=(8, 8), facecolor="#0f1318")
+    ax = plt.gca()
+    ax.set_facecolor("#0f1318")
+    # Plot base track lightly (background line)
+    ax.plot(x, y, color="#0b0e13", linewidth=8, alpha=0.9, zorder=1, solid_capstyle='round')
+    # Overlay colored segments according to strategy with glow
+    for i in range(n_segments):
+        l, r = edges[i], edges[i + 1]
+        mask = (dist >= l) & (dist < r if i < n_segments - 1 else dist <= r)
+        if not np.any(mask):
+            continue
+        base_color = color_map.get(int(strategy[i]), "#888888")
+        glow_rgba = mcolors.to_rgba(base_color, alpha=0.35)
+        line, = ax.plot(
+            x[mask], y[mask], color=base_color, linewidth=4, zorder=2, solid_capstyle='round'
+        )
+        line.set_path_effects([
+            patheffects.Stroke(linewidth=10, foreground=glow_rgba),
+            patheffects.Normal(),
+        ])
+
+    ax.set_aspect('equal', adjustable='datalim')
+    ax.axis('off')
+    plt.title(f"{event_norm}", color="#cfd8e3")
+
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    os.makedirs(static_dir, exist_ok=True)
+    filename = f"track_map_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plt.savefig(os.path.join(static_dir, filename), bbox_inches='tight', pad_inches=0.1, facecolor=fig.get_facecolor())
     plt.close()
     return f"/static/{filename}"
 
@@ -249,11 +326,16 @@ def run_ai():
         image_path = create_visualization(x_mid, speeds, batteries,
             title_suffix=f"({event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
 
+        # Create track map image (2D) with colored strategy segments
+        track_map_path = create_track_map_image(event=event, year=2024, session_code='R',
+                                               n_segments=len(df), strategy=best_strategy)
+
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
         return jsonify({
             'lap_time': f'{best_time:.3f}',
             'strategy': [label_map[v] for v in best_strategy],
-            'image_path': image_path
+            'image_path': image_path,
+            'track_image_path': track_map_path
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
