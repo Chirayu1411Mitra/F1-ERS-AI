@@ -2,15 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>🏎️ F1 ERS AI Optimizer</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
     <div class="container">
-      <h1>🏁 F1 ERS Deployment Optimizer</h1>
+      <header class="header">
+        <h1>🏁 F1 ERS Deployment Optimizer</h1>
+        <p class="subtitle">Find the fastest ERS plan for a real 2024 race lap.</p>
+      </header>
 
       <div class="controls">
         <label>Track:</label>
@@ -35,22 +39,43 @@
         <label>Enable DRS:</label>
         <input type="checkbox" id="drsToggle" checked />
 
-        <button id="runBtn">Run Prediction</button>
+        <button id="runBtn">Run Optimization</button>
       </div>
 
-      <div id="loader" class="hidden">Running AI Optimization... ⏳</div>
+        <div class="legend">
+          <span class="pill pill-coast">COAST</span>
+          <span class="pill pill-deploy">DEPLOY</span>
+          <span class="pill pill-harvest">HARVEST</span>
+        </div>
 
-      <div id="results" class="hidden">
-        <h2>Results</h2>
-        <p>
-          <strong>Fastest Lap Time:</strong> <span id="lapTime"></span> seconds
-        </p>
-        <p><strong>Best Strategy:</strong></p>
-        <pre id="strategyOutput"></pre>
-        <img id="lapImage" src="" alt="Optimal Lap Visualization" />
-      </div>
+        <div class="table-wrap">
+          <table class="segments" id="segmentsTable" aria-label="Per-segment actions">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <figure class="figure">
+          <img id="lapImage" src="" alt="Optimal lap: speed and battery visualization" />
+          <figcaption>
+            <button id="downloadBtn" class="secondary" disabled>Download Chart</button>
+          </figcaption>
+        </figure>
+
+        <figure class="figure">
+          <img id="trackImage" src="" alt="2D track map with colored ERS zones" />
+          <figcaption>
+            <button id="downloadTrackBtn" class="secondary" disabled>Download Track Map</button>
+          </figcaption>
+        </figure>
+      </section>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
   </body>
-</html>
+  </html>
