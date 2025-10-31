@@ -244,7 +244,7 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 0.875rem;
-            color: var(--color-slate-700);
+            color: #fff;
             margin-bottom: 0.75rem;
         }
 
@@ -478,7 +478,7 @@
 
         .action-info h4 {
             font-size: 0.875rem;
-            color: var(--color-slate-900);
+            color: #fff;
             margin-bottom: 0.125rem;
         }
 
@@ -1013,7 +1013,7 @@
 
         .mission-card h3 {
             font-size: 1.125rem;
-            color: var(--color-slate-900);
+            color: #fff;
             margin-bottom: 0.75rem;
         }
 
@@ -1092,7 +1092,7 @@
 
         .features { padding: 3rem 1.5rem; }
         .features .section-header { text-align:center; margin-bottom:2rem; }
-        .features-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:1.25rem; }
+        .features-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:2.25rem; }
 
         /* Cutting-Edge feature cards */
         .feature-card { background: rgba(20,20,20,0.9); border:1px solid rgba(239,68,68,0.18); border-radius:16px; padding:2rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
@@ -1337,7 +1337,7 @@
                 <!-- 2D Track Layout -->
                 <div class="card" style="margin-top:1.5rem">
                     <div style="margin-bottom:1.5rem">
-                        <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem">
+                        <h3 style="font-size:1.125rem;color:var#fff;margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px;fill:var(--color-slate-700)">
                                 <path d="M3 13h2v-2H3v2zm4 0h2V7H7v6zm4 0h2V4h-2v9zm4 0h2V9h-2v4zm4 0h2V6h-2v7z"/>
                             </svg>
@@ -1564,20 +1564,20 @@
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card" style="background:linear-gradient(135deg,var(--color-slate-900),var(--color-slate-800));border-color:var(--color-slate-700)">
-                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">10</p>
-                    <p style="color:#94a3b8;font-size:0.875rem">Track Segments</p>
+                    <p style="color:rgb(0, 0, 0);font-size:2rem;margin-bottom:0.5rem">10</p>
+                    <p style="color:#000000;font-size:0.875rem">Track Segments</p>
         </div>
                 <div class="stat-card deploy">
-                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">3</p>
-                    <p style="color:#fecaca;font-size:0.875rem">ERS Actions</p>
+                    <p style="color:rgb(0, 0, 0);font-size:2rem;margin-bottom:0.5rem">3</p>
+                    <p style="color:#000000;font-size:0.875rem">ERS Actions</p>
                 </div>
                 <div class="stat-card coast">
-                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">7+</p>
-                    <p style="color:#bfdbfe;font-size:0.875rem">F1 Circuits</p>
+                    <p style="color:rgb(0, 0, 0);font-size:2rem;margin-bottom:0.5rem">7+</p>
+                    <p style="color:#000000;font-size:0.875rem">F1 Circuits</p>
                 </div>
                 <div class="stat-card harvest">
-                    <p style="color:white;font-size:2rem;margin-bottom:0.5rem">2024</p>
-                    <p style="color:#bbf7d0;font-size:0.875rem">Season Data</p>
+                    <p style="color:rgb(0, 0, 0);font-size:2rem;margin-bottom:0.5rem">2024</p>
+                    <p style="color:#000000;font-size:0.875rem">Season Data</p>
                 </div>
             </div>
         </div>
@@ -1757,6 +1757,17 @@
                         g.appendChild(path);
                     });
                     svg.appendChild(g);
+                    // ensure the moving dot exists
+                    let dot = document.getElementById('track-dot');
+                    if (!dot) {
+                        dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        dot.setAttribute('id', 'track-dot');
+                        dot.setAttribute('r', '0.9');
+                        dot.setAttribute('fill', '#ffffff');
+                        dot.setAttribute('stroke', '#000000');
+                        dot.setAttribute('stroke-width', '0.2');
+                        svg.appendChild(dot);
+                    }
                     // trigger fade-in
                     requestAnimationFrame(() => svg.classList.add('show'));
                 }
@@ -1882,6 +1893,10 @@
                 if (data.series) {
                     renderERSChart(data.series, data.chart_title);
                 }
+                // Start moving dot on 2D track
+                if (Array.isArray(data.track_segments)) {
+                    startTrackDotAnimation(data.track_segments);
+                }
                 // Robustness block
                 if (data.robustness) {
                     const r = data.robustness;
@@ -1923,6 +1938,64 @@
         }
 
         document.getElementById('optimizer-form').addEventListener('submit', runPrediction);
+
+        // --- Moving dot animation across 2D map ---
+        let _dotTimer = null;
+        let _dotPoints = [];
+        let _dotIdx = 0;
+        const ACTION_DELAY_MS = { 0: 24, 1: 10, 2: 40 }; // coast normal, deploy fast, harvest slow
+
+        function stopTrackDotAnimation() {
+            if (_dotTimer) {
+                clearTimeout(_dotTimer);
+                _dotTimer = null;
+            }
+        }
+
+        function startTrackDotAnimation(trackSegments) {
+            try {
+                stopTrackDotAnimation();
+                _dotPoints = [];
+                _dotIdx = 0;
+                if (!Array.isArray(trackSegments)) return;
+                // Flatten all segment points, keeping action to modulate speed
+                for (let i = 0; i < trackSegments.length; i++) {
+                    const seg = trackSegments[i] || {};
+                    const pts = Array.isArray(seg.points) ? seg.points : [];
+                    for (let j = 0; j < pts.length; j++) {
+                        const p = pts[j];
+                        if (Array.isArray(p) && p.length === 2) {
+                            _dotPoints.push({ x: p[0], y: p[1], action: seg.action });
+                        }
+                    }
+                }
+                if (_dotPoints.length < 2) return;
+                const svg = document.getElementById('track-2d-svg');
+                if (!svg) return;
+                let dot = document.getElementById('track-dot');
+                if (!dot) {
+                    dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    dot.setAttribute('id', 'track-dot');
+                    dot.setAttribute('r', '0.9');
+                    dot.setAttribute('fill', '#ffffff');
+                    dot.setAttribute('stroke', '#000000');
+                    dot.setAttribute('stroke-width', '0.2');
+                    svg.appendChild(dot);
+                }
+
+                const step = () => {
+                    const p = _dotPoints[_dotIdx];
+                    dot.setAttribute('cx', String(p.x));
+                    dot.setAttribute('cy', String(p.y));
+                    _dotIdx = (_dotIdx + 1) % _dotPoints.length;
+                    const delay = ACTION_DELAY_MS[p.action] ?? 24;
+                    _dotTimer = setTimeout(step, delay);
+                };
+                step();
+            } catch (e) {
+                // swallow animation errors
+            }
+        }
     </script>
 </body>
 </html>
