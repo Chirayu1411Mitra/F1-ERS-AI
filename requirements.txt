@@ -6,5 +6,6 @@ scikit-learn==1.5.2
 joblib==1.4.2
 fastf1==3.3.5
 geneticalgorithm==1.0.2
+gunicorn==21.2.0 
 
 
