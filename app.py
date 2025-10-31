@@ -47,6 +47,46 @@ if fastf1 is not None:
     except Exception:
         pass
 
+# --- On-demand warmup endpoints to avoid long first requests timing out ---
+_WARM_STATUS: dict[str, str] = {}
+
+def _start_warmup(event: str):
+    if fastf1 is None:
+        return
+    key = (event or "Monza").strip() or "Monza"
+    if _WARM_STATUS.get(key) == "running":
+        return
+    _WARM_STATUS[key] = "running"
+
+    def _runner():
+        try:
+            build_track_df(2024, key, "R", n_segments=10)
+        finally:
+            _WARM_STATUS[key] = "done"
+
+    try:
+        threading.Thread(target=_runner, daemon=True).start()
+    except Exception:
+        _WARM_STATUS[key] = "error"
+
+@app.route('/warm')
+def warm():
+    try:
+        event = request.args.get('event', 'Monza')
+        _start_warmup(event)
+        return jsonify({"status": "accepted", "event": event}), 202
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/warm-status')
+def warm_status():
+    try:
+        event = request.args.get('event', 'Monza')
+        state = _WARM_STATUS.get(event, "unknown")
+        return jsonify({"event": event, "status": state}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def build_track_df(year:int, event:str, session_code:str="R", n_segments:int=10) -> pd.DataFrame:
     """Fetch telemetry for a session and bin into segments matching the notebook schema."""
     if fastf1 is None:
