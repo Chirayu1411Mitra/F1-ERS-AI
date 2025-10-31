@@ -10,6 +10,8 @@ from matplotlib import colors as mcolors
 import os
 import sys
 import subprocess
+import threading
+import time
 
 # Ensure FastF1 (auto-install if missing)
 try:
@@ -28,6 +30,20 @@ if fastf1 is not None:
     os.makedirs(os.path.join(os.path.dirname(__file__), "fastf1_cache"), exist_ok=True)
     try:
         fastf1.Cache.enable_cache(os.path.join(os.path.dirname(__file__), "fastf1_cache"))
+    except Exception:
+        pass
+
+    # Warm up FastF1 cache in the background to avoid cold-start timeouts on free hosts
+    def _warmup_cache():
+        try:
+            time.sleep(2)
+            build_track_df(2024, "Monza", "R", n_segments=10)
+        except Exception:
+            # Never crash due to warmup failures
+            pass
+
+    try:
+        threading.Thread(target=_warmup_cache, daemon=True).start()
     except Exception:
         pass
 
