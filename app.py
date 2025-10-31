@@ -601,8 +601,9 @@ def run_ai():
         lengths = df["length_m"].astype(float).to_numpy()
         cum = np.concatenate(([0.0], np.cumsum(lengths)))
         x_mid = (cum[1:] + cum[:-1]) / 2.0
+        title_suffix = f"({mode_tag} • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})"
         image_path = create_visualization(x_mid, speeds, batteries,
-            title_suffix=f"({mode_tag} • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
+            title_suffix=title_suffix)
 
         label_map = {0: 'COAST', 1: 'DEPLOY', 2: 'HARVEST'}
         track_segments = _build_track_segments_xy(event, 2024, 'R', len(df), best_strategy)
@@ -640,7 +641,13 @@ def run_ai():
             'source': mode_tag,
             'track_segments': track_segments,
             'segment_details': details,
-            'robustness': robustness
+            'robustness': robustness,
+            'series': {
+                'distance_m': [float(v) for v in x_mid.tolist()],
+                'speed_kph': [float(v) for v in speeds.tolist()],
+                'battery_mj': [float(v) for v in batteries.tolist()],
+            },
+            'chart_title': f'Optimal ERS Strategy {title_suffix}'
         }
         if policy_error:
             resp['note'] = f'Policy unavailable: {policy_error}. Used GA fallback.'
@@ -680,8 +687,9 @@ def predict_policy():
         lengths = df["length_m"].astype(float).to_numpy()
         cum = np.concatenate(([0.0], np.cumsum(lengths)))
         x_mid = (cum[1:] + cum[:-1]) / 2.0
+        title_suffix = f"(Policy • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})"
         image_path = create_visualization(x_mid, speeds, batteries,
-            title_suffix=f"(Policy • {event} 2024, {track_condition}, DRS {'On' if drs_enabled else 'Off'})")
+            title_suffix=title_suffix)
 
         # Create 2D interactive data and image
         track_map_path = create_track_map_image(event=event, year=2024, session_code='R',
@@ -723,7 +731,13 @@ def predict_policy():
             'track_image_path': track_map_path,
             'track_segments': track_segments,
             'segment_details': details,
-            'robustness': robustness
+            'robustness': robustness,
+            'series': {
+                'distance_m': [float(v) for v in x_mid.tolist()],
+                'speed_kph': [float(v) for v in speeds.tolist()],
+                'battery_mj': [float(v) for v in batteries.tolist()],
+            },
+            'chart_title': f'Optimal ERS Strategy {title_suffix}'
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

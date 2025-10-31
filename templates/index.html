@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 ERS Optimizer - Team Pole Position</title>
@@ -10,6 +10,8 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        
 
         :root {
             --color-primary: #dc2626;
@@ -29,20 +31,22 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background: var(--color-slate-50);
-            color: var(--color-slate-900);
+            background: radial-gradient(1200px 800px at 70% 10%, rgba(220,38,38,0.12), transparent 60%),
+                        radial-gradient(900px 600px at 20% 30%, rgba(153,27,27,0.14), transparent 60%),
+                        linear-gradient(180deg, #0a0a0a 0%, #1a0a0a 40%, #0a0a0a 100%);
+            color: #788090;
             line-height: 1.6;
         }
 
         /* Header */
         header {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(10, 10, 10, 0.9);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--color-slate-200);
+            border-bottom: 1px solid rgba(239, 68, 68, 0.25);
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
         }
 
         .header-container {
@@ -79,12 +83,12 @@
         .logo-text h1 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--color-slate-900);
+            color: #ffffff;
         }
 
         .logo-text p {
             font-size: 0.75rem;
-            color: var(--color-slate-500);
+            color: #cbd5e1;
         }
 
         .header-badges {
@@ -101,9 +105,9 @@
         }
 
         .badge-live {
-            background: #fef2f2;
-            border-color: #fecaca;
-            color: #991b1b;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fecaca;
             display: flex;
             align-items: center;
             gap: 0.375rem;
@@ -123,9 +127,9 @@
         }
 
         .badge-season {
-            background: white;
-            border-color: var(--color-slate-200);
-            color: var(--color-slate-600);
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.18);
+            color: #cbd5e1;
         }
 
         /* Main Container */
@@ -190,23 +194,23 @@
 
         /* Cards */
         .card {
-            background: white;
-            border: 1px solid var(--color-slate-200);
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid rgba(239, 68, 68, 0.2);
             border-radius: 12px;
             padding: 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         }
 
         .card h2 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--color-slate-900);
+            color: #ffffff;
             margin-bottom: 0.25rem;
         }
 
         .card .subtitle {
             font-size: 0.875rem;
-            color: var(--color-slate-500);
+            color: #94a3b8;
             margin-bottom: 1.5rem;
         }
 
@@ -254,23 +258,23 @@
             width: 100%;
             height: 48px;
             padding: 0 1rem;
-            border: 1px solid var(--color-slate-300);
+            border: 1px solid rgba(239, 68, 68, 0.35);
             border-radius: 8px;
-            background: white;
+            background: #0b0b0b;
             font-size: 0.875rem;
-            color: var(--color-slate-900);
+            color: #ffffff;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         select:hover {
-            border-color: var(--color-slate-400);
+            border-color: rgba(239, 68, 68, 0.6);
         }
 
         select:focus {
             outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
         }
 
         .checkbox-group {
@@ -312,9 +316,9 @@
         }
 
         .btn-primary {
-            background: linear-gradient(to right, var(--color-primary), #b91c1c);
+            background: linear-gradient(90deg, #ef4444, #dc2626);
             color: white;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
         }
 
         .btn-primary:hover:not(:disabled) {
@@ -369,11 +373,11 @@
 
         /* Info Card */
         .info-card {
-            background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-slate-800) 100%);
+            background: linear-gradient(135deg, #0b0b0b, #121212);
             color: white;
             padding: 1.5rem;
             border-radius: 12px;
-            border: 1px solid var(--color-slate-700);
+            border: 1px solid rgba(239, 68, 68, 0.25);
         }
 
         .info-card h3 {
@@ -494,8 +498,8 @@
         }
 
         .lap-time-hero {
-            background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-slate-800) 50%, var(--color-slate-900) 100%);
-            border: 1px solid var(--color-slate-700);
+            background: linear-gradient(135deg, #0b0b0b 0%, #1a0a0a 50%, #0b0b0b 100%);
+            border: 1px solid rgba(239, 68, 68, 0.25);
             border-radius: 12px;
             padding: 3rem 2rem;
             text-align: center;
@@ -1021,8 +1025,8 @@
 
         /* Footer */
         footer {
-            border-top: 1px solid var(--color-slate-200);
-            background: white;
+            border-top: 1px solid rgba(239, 68, 68, 0.25);
+            background: #0a0a0a;
             margin-top: 5rem;
         }
 
@@ -1039,7 +1043,7 @@
 
         .footer-container p {
             font-size: 0.875rem;
-            color: var(--color-slate-500);
+            color: #94a3b8;
         }
 
         .footer-badge {
@@ -1075,9 +1079,36 @@
         .hidden {
             display: none !important;
         }
+        /* Extra UI: hero + features + nav */
+        .nav-links { display:flex; align-items:center; gap:1rem; }
+        .nav-link { color:#e5e7eb; text-decoration:none; font-size:0.9rem; cursor:pointer; }
+        .nav-link:hover { color:#f87171; }
+        .header-cta { padding:0.5rem 1rem; background:linear-gradient(90deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer; }
+
+        .hero { min-height: 70vh; display:flex; align-items:center; justify-content:center; text-align:center; padding:5rem 1.5rem 3rem; }
+        .hero h1 { font-size: 3.5rem; line-height:1.15; color:#fff; letter-spacing:-0.02em; }
+        .hero p { font-size: 1.125rem; color:#cbd5e1; max-width: 56rem; margin: 1rem auto 2rem; }
+        .hero .btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+
+        .features { padding: 3rem 1.5rem; }
+        .features .section-header { text-align:center; margin-bottom:2rem; }
+        .features-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:1.25rem; }
+
+        /* Cutting-Edge feature cards */
+        .feature-card { background: rgba(20,20,20,0.9); border:1px solid rgba(239,68,68,0.18); border-radius:16px; padding:2rem; box-shadow:0 8px 24px rgba(0,0,0,0.35); transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+        .feature-card:hover { transform: translateY(-6px); border-color: #ef4444; box-shadow: 0 16px 40px rgba(239,68,68,0.28), 0 10px 30px rgba(0,0,0,0.5); }
+        .feature-card h3 { color:#fff; font-size:1.125rem; margin:0 0 .5rem 0; }
+        .feature-card p { color:#cbd5e1; font-size:.9rem; line-height:1.6; }
+
+        .feature-icon { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; position:relative; background: radial-gradient(120% 120% at 30% 20%, #ef4444, #7f1d1d); box-shadow: 0 12px 28px rgba(239,68,68,.35), inset 0 0 22px rgba(255,255,255,.06); }
+        .feature-icon svg { width:28px; height:28px; fill:#fff; opacity:.95; }
+
+        /* Team section cards */
+        .mission-card { background: rgba(20,20,20,0.9); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:2rem; transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+        .mission-card:hover { transform: translateY(-6px); border-color:#ef4444; box-shadow:0 14px 36px rgba(239,68,68,0.22); }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <!-- Header -->
     <header>
         <div class="header-container">
@@ -1092,19 +1123,83 @@
                     <p>Powered by Advanced AI Analytics</p>
                 </div>
             </div>
-            <div class="header-badges">
-                <span class="badge badge-live">
-                    <span class="pulse-dot"></span>
-                    Live
-                </span>
-                <span class="badge badge-season">2024 Season</span>
-            </div>
+            <nav class="nav-links">
+                <a class="nav-link" onclick="scrollToSection('features')">Features</a>
+                <a class="nav-link" onclick="scrollToSection('optimizer-anchor')">Optimizer</a>
+                <a class="nav-link" onclick="scrollToSection('team-anchor')">Team</a>
+                <button class="header-cta" onclick="scrollToSection('optimizer-anchor')">Try Now</button>
+            </nav>
         </div>
     </header>
 
     <!-- Main Content -->
     <main>
-        <!-- Tabs -->
+        <!-- Hero (Landing) -->
+    <section class="hero">
+            <div>
+                <div class="badge badge-live" style="display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1rem"><span class="pulse-dot"></span> Hackathon 2024 • Team Pole Position</div>
+                <h1>The Future of <span style="color:#f87171">F1 ERS</span> Optimization</h1>
+                <p>AI-powered genetic algorithms to find the fastest Energy Recovery System deployment strategy for any F1 circuit.</p>
+                <div class="btns">
+                    <button class="btn btn-primary" onclick="scrollToSection('optimizer-anchor')">Start Optimizing</button>
+                    <button class="btn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:#fff" onclick="scrollToSection('features')">Learn More</button>
+            </div>
+        </div>
+    </section>
+
+        <!-- Features (Second page on scroll) -->
+    <section id="features" class="features">
+            <div class="section-header">
+                <span class="badge badge-season">Why Choose Us</span>
+                <h2 style="color:#fff;font-size:2rem;margin-top:.5rem">Cutting-Edge Technology</h2>
+                <p style="color:#94a3b8">Revolutionary AI-powered optimization for maximum F1 performance</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <h3>Genetic Algorithm</h3>
+                    <p>Searches thousands of combinations to find the fastest lap configuration.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+                    </div>
+                    <h3>Multi-Track Support</h3>
+                    <p>Optimized for all major F1 circuits with 2024 session data.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </div>
+                    <h3>Weather Adaptive</h3>
+                    <p>Dry, Intermediate, and Wet-ready strategy tuning.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                    </div>
+                    <h3>DRS Integration</h3>
+                    <p>Intelligent DRS zone optimization for straight-line gains.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/></svg>
+                    </div>
+                    <h3>Visual Analytics</h3>
+                    <p>Interactive charts and segment-by-segment breakdowns.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm8-2h-3.17l-1.84-1.84A2 2 0 0013.66 3H10.34a2 2 0 00-1.41.59L7.09 6H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2z"/></svg>
+                    </div>
+                    <h3>Real-Time Processing</h3>
+                    <p>Get results in seconds with live progress.</p>
+            </div>
+        </div>
+    </section>
+        <!-- Tabs (hidden via CSS) -->
         <div class="tabs">
             <div class="tab-list">
                 <button class="tab-button active" onclick="switchTab('optimizer')">
@@ -1119,10 +1214,11 @@
                     </svg>
                     Team
                 </button>
-            </div>
-        </div>
+                </div>
+                </div>
 
-        <!-- Optimizer Tab -->
+        <div id="optimizer-anchor"></div>
+    <!-- Optimizer Section -->
         <div id="optimizer-tab" class="tab-content active">
             <div class="grid grid-lg-3">
                 <!-- Configuration Panel -->
@@ -1362,22 +1458,22 @@
                     </div>
                 </div>
 
-                <!-- Track Map (server-rendered image) -->
+                <!-- Interactive Strategy Graph -->
                 <div class="card">
                     <div style="margin-bottom:1.5rem">
                         <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px;fill:var(--color-slate-700)">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                <path d="M3 13h2v-2H3v2zm4 0h2V7H7v6zm4 0h2V4h-2v9zm4 0h2V9h-2v4zm4 0h2V6h-2v7z"/>
                             </svg>
-                            Track Strategy Map
+                            Strategy Graph (Interactive)
                         </h3>
-                        <p class="subtitle" style="margin:0">Model-rendered plot of Speed and Battery across segments</p>
+                        <p class="subtitle" style="margin:0">Speed (km/h) and Battery (MJ) across lap distance</p>
+                    </div>
+                    <canvas id="ers-chart" height="140"></canvas>
                     </div>
 
-                    <div class="track-map" style="display:flex;align-items:center;justify-content:center;background:white;border:1px solid var(--color-slate-200)">
-                        <img id="track-image" src="" alt="Strategy Plot" style="max-width:100%;max-height:100%;object-fit:contain">
-                    </div>
-                </div>
+                <!-- Track Map (server-rendered image) -->
+               
 
                 <!-- Segment Grid -->
                 <div class="card">
@@ -1396,12 +1492,13 @@
                     <div style="margin-bottom:1rem">
                         <h3 style="font-size:1.125rem;color:var(--color-slate-900);margin-bottom:0.25rem">Strategy Robustness</h3>
                         <p class="subtitle" style="margin:0">Same optimized strategy evaluated under Dry, Intermediate, and Wet</p>
-                    </div>
+            </div>
                     <div id="robustness-times" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;color:var(--color-slate-700)"></div>
-                </div>
+        </div>
             </div>
         </div>
 
+        <div id="team-anchor"></div>
         <!-- Team Tab -->
         <div id="team-tab" class="tab-content">
             <!-- Team Hero -->
@@ -1441,7 +1538,7 @@
                     </div>
                     <h3>Our Mission</h3>
                     <p>Revolutionize F1 ERS optimization through intelligent AI-driven strategies that maximize performance and efficiency on every lap.</p>
-      </div>
+                </div>
 
                 <div class="mission-card">
                     <div class="mission-icon red">
@@ -1461,15 +1558,15 @@
                     </div>
                     <h3>Our Vision</h3>
                     <p>Making advanced F1 analytics accessible to everyone - from professional teams to passionate motorsport enthusiasts worldwide.</p>
-      </div>
-    </div>
+                </div>
+            </div>
 
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card" style="background:linear-gradient(135deg,var(--color-slate-900),var(--color-slate-800));border-color:var(--color-slate-700)">
                     <p style="color:white;font-size:2rem;margin-bottom:0.5rem">10</p>
                     <p style="color:#94a3b8;font-size:0.875rem">Track Segments</p>
-                </div>
+        </div>
                 <div class="stat-card deploy">
                     <p style="color:white;font-size:2rem;margin-bottom:0.5rem">3</p>
                     <p style="color:#fecaca;font-size:0.875rem">ERS Actions</p>
@@ -1501,7 +1598,16 @@
         </div>
     </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                const top = el.getBoundingClientRect().top + window.scrollY - 70;
+                window.scrollTo({ top, behavior: 'smooth' });
+            }
+        }
+        let ersChart = null;
         // --- Config ---
         const TRACK_VALUE_TO_EVENT = {
             bahrain: 'Bahrain',
@@ -1661,13 +1767,64 @@
         function stopBlip() {}
         async function startBlip(_) {}
 
+        // Interactive dual-axis chart (Speed vs Battery)
+        function renderERSChart(series, title) {
+            const el = document.getElementById('ers-chart');
+            if (!el || !series) return;
+            const ctx = el.getContext('2d');
+            if (ersChart) {
+                ersChart.destroy();
+            }
+            ersChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: series.distance_m || [],
+                    datasets: [
+                        {
+                            label: 'Speed (km/h)',
+                            data: series.speed_kph || [],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                            yAxisID: 'y',
+                            tension: 0.35,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Energy (MJ)',
+                            data: series.battery_mj || [],
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                            yAxisID: 'y1',
+                            borderDash: [6, 6],
+                            tension: 0.35,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Distance (m)' } },
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'Speed (km/h)' } },
+                        y1: { type: 'linear', position: 'right', title: { display: true, text: 'Energy (MJ)' }, grid: { drawOnChartArea: false } }
+                    },
+                    plugins: {
+                        legend: { display: true },
+                        title: { display: !!title, text: title || '' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    interaction: { mode: 'index', intersect: false }
+                }
+            });
+        }
+
         async function runPrediction(e) {
             e.preventDefault();
             const btn = document.getElementById('optimize-btn');
             const progressContainer = document.getElementById('progress-container');
             const progressFill = document.getElementById('progress-fill');
             const resultsSection = document.getElementById('results-section');
-
+            
             const trackValue = document.getElementById('track').value;
             const trackLabel = document.getElementById('track').options[document.getElementById('track').selectedIndex].text;
             const conditionValue = document.getElementById('condition').value;
@@ -1722,6 +1879,9 @@
                 progressFill.style.width = '80%';
                 const strategy = Array.isArray(data.strategy) ? data.strategy : [];
                 renderResults(trackLabel, conditionValue, drs, data.lap_time, strategy, data.image_path, data.track_image_path || data.track_map_path, data.track_segments, data.segment_details);
+                if (data.series) {
+                    renderERSChart(data.series, data.chart_title);
+                }
                 // Robustness block
                 if (data.robustness) {
                     const r = data.robustness;
@@ -1736,17 +1896,17 @@
                 }
 
                 progressFill.style.width = '100%';
-                setTimeout(() => {
+                    setTimeout(() => {
                     stopBlip();
-                    btn.disabled = false;
-                    btn.innerHTML = `
+                        btn.disabled = false;
+                        btn.innerHTML = `
                         <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n<path d=\"M8 5v14l11-7z\"/>\n</svg>
                         Run Optimization`;
-                    progressContainer.classList.add('hidden');
-                    progressFill.style.width = '0%';
-                    resultsSection.classList.add('show');
+                        progressContainer.classList.add('hidden');
+                        progressFill.style.width = '0%';
+                        resultsSection.classList.add('show');
                     // Do not auto-scroll to lap timer; keep user's current position
-                }, 300);
+            }, 300);
             } catch (err) {
                 stopBlip();
                 btn.disabled = false;
@@ -1764,5 +1924,5 @@
 
         document.getElementById('optimizer-form').addEventListener('submit', runPrediction);
     </script>
-  </body>
+</body>
 </html>
