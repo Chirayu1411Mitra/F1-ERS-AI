@@ -21,7 +21,7 @@ env/
 venv/
 
 fastf1_cache/
-datasets/*.csv
+!datasets/*.csv
 *.ipynb
 
 .vercel/
