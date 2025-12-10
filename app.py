@@ -245,6 +245,63 @@ def _build_track_segments_xy(event: str, year: int, session_code: str, n_segment
         "ABU DHABI": "Abu Dhabi Grand Prix",
     }
     try:
+        segments = []
+        if fastf1 is None:
+            # Offline mode: Load from JSON
+            json_path = os.path.join(os.path.dirname(__file__), "datasets", "track_geometries.json")
+            if os.path.exists(json_path):
+                import json
+                with open(json_path, 'r') as f:
+                    geometries = json.load(f)
+                
+                # Match event key
+                event_lower = event.lower()
+                matched_key = None
+                for key in geometries:
+                    if key.lower() == event_lower:
+                        matched_key = key
+                        break
+                
+                # Fallback aliases
+                if not matched_key:
+                    aliases = {"bahrain": "Bahrain", "saudi": "Saudi Arabian Grand Prix", "jeddah": "Saudi Arabian Grand Prix", "australia": "Australian Grand Prix", "melbourne": "Australian Grand Prix", "imola": "Emilia Romagna Grand Prix", "monaco": "Monaco", "spain": "Spanish Grand Prix", "barcelona": "Spanish Grand Prix", "britain": "British Grand Prix", "silverstone": "British Grand Prix", "belgium": "Belgian Grand Prix", "spa": "Belgian Grand Prix", "italy": "Italian Grand Prix", "monza": "Italian Grand Prix", "netherlands": "Dutch Grand Prix", "zandvoort": "Dutch Grand Prix", "baku": "Azerbaijan Grand Prix", "azerbaijan": "Azerbaijan Grand Prix", "singapore": "Singapore Grand Prix", "austin": "United States Grand Prix", "usa": "United States Grand Prix", "mexico": "Mexico City Grand Prix", "brazil": "São Paulo Grand Prix", "vegas": "Las Vegas Grand Prix", "qatar": "Qatar Grand Prix", "abu dhabi": "Abu Dhabi Grand Prix"}
+                    for alias, real in aliases.items():
+                        if alias in event_lower:
+                            matched_key = real
+                            break
+                            
+                if matched_key:
+                    geo = geometries[matched_key]
+                    x = geo['x']
+                    y = geo['y']
+                    # Split into n_segments
+                    chunk_size = max(1, len(x) // n_segments)
+                    
+                    xmin, xmax = min(x), max(x)
+                    ymin, ymax = min(y), max(y)
+                    xr, yr = (xmax - xmin) or 1, (ymax - ymin) or 1
+                    
+                    for i in range(n_segments):
+                        start_idx = i * chunk_size
+                        end_idx = min((i + 1) * chunk_size, len(x))
+                        if i == n_segments - 1:
+                            end_idx = len(x)
+                            
+                        chunk_x = x[start_idx:end_idx]
+                        chunk_y = y[start_idx:end_idx]
+                        
+                        pts = []
+                        for j in range(len(chunk_x)):
+                            px = (chunk_x[j] - xmin) / xr * 100.0
+                            py = (chunk_y[j] - ymin) / yr * 100.0
+                            pts.append([round(px, 2), round(py, 2)])
+                        
+                        segments.append({
+                            "points": pts,
+                            "action": int(strategy[i]) if i < len(strategy) else 0
+                        })
+            return segments
+
         key = str(event).strip().upper()
         event_norm = aliases.get(key, event)
         session = fastf1.get_session(year, event_norm, session_code)
@@ -289,6 +346,94 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
     Returns static path to the saved PNG.
     """
     if fastf1 is None:
+        # Try to load pre-calculated geometries from JSON
+        json_path = os.path.join(os.path.dirname(__file__), "datasets", "track_geometries.json")
+        if os.path.exists(json_path):
+            try:
+                import json
+                with open(json_path, 'r') as f:
+                    geometries = json.load(f)
+                
+                # Normalize event name to match JSON keys
+                event_lower = event.lower()
+                matched_key = None
+                
+                # Smart matching for event names (e.g. "Saudi Arabian Grand Prix" vs "JEDDAH")
+                # The JSON uses full names like "Bahrain", "Saudi Arabian Grand Prix"
+                # But input might be "BAHRAIN" or "Saudi Arabia"
+                
+                # Direct match first (case insensitive)
+                for key in geometries.keys():
+                    if key.lower() == event_lower:
+                        matched_key = key
+                        break
+                
+                # Alias matching if direct failed
+                if not matched_key:
+                    aliases = {
+                        "bahrain": "Bahrain",
+                        "saudi": "Saudi Arabian Grand Prix",
+                        "jeddah": "Saudi Arabian Grand Prix",
+                        "australia": "Australian Grand Prix",
+                        "melbourne": "Australian Grand Prix",
+                        "imola": "Emilia Romagna Grand Prix",
+                        "emilia": "Emilia Romagna Grand Prix", 
+                        "monaco": "Monaco",
+                        "spain": "Spanish Grand Prix",
+                        "barcelona": "Spanish Grand Prix",
+                        "britain": "British Grand Prix",
+                        "silverstone": "British Grand Prix",
+                        "belgium": "Belgian Grand Prix",
+                        "spa": "Belgian Grand Prix",
+                        "italy": "Italian Grand Prix",
+                        "monza": "Italian Grand Prix",
+                        "netherlands": "Dutch Grand Prix",
+                        "dutch": "Dutch Grand Prix",
+                        "zandvoort": "Dutch Grand Prix",
+                        "baku": "Azerbaijan Grand Prix",
+                        "azerbaijan": "Azerbaijan Grand Prix",
+                        "singapore": "Singapore Grand Prix",
+                        "austin": "United States Grand Prix",
+                        "usa": "United States Grand Prix",
+                        "mexico": "Mexico City Grand Prix",
+                        "brazil": "São Paulo Grand Prix",
+                        "vegas": "Las Vegas Grand Prix",
+                        "las vegas": "Las Vegas Grand Prix",
+                        "qatar": "Qatar Grand Prix",
+                        "abu dhabi": "Abu Dhabi Grand Prix"
+                    }
+                    # Try to find alias in current event name
+                    for alias, real_name in aliases.items():
+                        if alias in event_lower:
+                            if real_name in geometries:
+                                matched_key = real_name
+                                break
+            
+                if matched_key:
+                    geo = geometries[matched_key]
+                    x_vals = np.array(geo['x'])
+                    y_vals = np.array(geo['y'])
+                    dist_vals = np.array(geo['dist'])
+                    
+                    # Create plot using these coordinates
+                    fig, ax = plt.subplots(figsize=(8, 8), dpi=100)
+                    ax.plot(x_vals, y_vals, color='white', linewidth=2)
+                    ax.set_facecolor('black')
+                    fig.patch.set_facecolor('black')
+                    ax.axis('off')
+                    ax.set_aspect('equal')
+                    plt.tight_layout()
+                    
+                    filename = f"track_map_{event.replace(' ', '_')}_offline.png"
+                    save_path = os.path.join("static", filename)
+                    plt.savefig(save_path, facecolor='black')
+                    plt.close(fig)
+                    return os.path.join("static", filename)
+                    
+            except Exception as e:
+                print(f"Error loading offline map: {e}")
+                pass # Fallback to None
+                
         # Gracefully handle missing FastF1 by returning no image path
         return None
     # Normalize event as in build_track_df
