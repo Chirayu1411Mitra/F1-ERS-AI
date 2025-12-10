@@ -2,6 +2,12 @@ fastf1_cache/
 *.ff1pkl
 *.sqlite
 
+# Models and build artifacts
+!models/ers_policy.pkl
+*.tar
+*.tar.gz
+docker-image-*.tar
+
 # Python bytecode/cache
 __pycache__/
 *.py[cod]

@@ -1,57 +1,44 @@
 from flask import Flask, render_template, request, jsonify
-import pandas as pd
-import numpy as np
-from datetime import datetime
-import matplotlib
-matplotlib.use("Agg")  # headless backend for server-side image generation
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as patheffects
-from matplotlib import colors as mcolors
 import os
 import sys
-import subprocess
-import threading
 import time
+import threading
+import subprocess
+from datetime import datetime
 
-# Ensure FastF1 (auto-install if missing)
-try:
-    import fastf1
-except Exception:  # pragma: no cover
+# Heavy libraries are imported lazily where needed (FastF1 in particular)
+# to reduce memory usage on constrained free hosts (e.g. Render free tier).
+
+# Feature flag: enable FastF1 only when FASTF1_ENABLED=1 is set in the environment.
+FASTF1_ENABLED = os.getenv("FASTF1_ENABLED", "0") == "1"
+fastf1 = None
+if FASTF1_ENABLED:
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "fastf1", "--quiet"])  # non-interactive
-        import fastf1  # type: ignore
+        import fastf1
     except Exception:
+        # don't crash at import time; treat as unavailable
         fastf1 = None
+
+# Matplotlib and numpy/pandas are imported where necessary (they are still
+# required by many functions and by the Docker image's build-time install).
+matplotlib = None
+plt = None
+patheffects = None
+mcolors = None
+pd = None
+np = None
 
 app = Flask(__name__)
 
-# Prepare FastF1 cache if available
-if fastf1 is not None:
-    os.makedirs(os.path.join(os.path.dirname(__file__), "fastf1_cache"), exist_ok=True)
-    try:
-        fastf1.Cache.enable_cache(os.path.join(os.path.dirname(__file__), "fastf1_cache"))
-    except Exception:
-        pass
-
-    # Warm up FastF1 cache in the background to avoid cold-start timeouts on free hosts
-    def _warmup_cache():
-        try:
-            time.sleep(2)
-            build_track_df(2024, "Monza", "R", n_segments=10)
-        except Exception:
-            # Never crash due to warmup failures
-            pass
-
-    try:
-        threading.Thread(target=_warmup_cache, daemon=True).start()
-    except Exception:
-        pass
+# If FastF1 is enabled at runtime, we will initialize its cache lazily when
+# build_track_df is called. Avoid background warmups on low-memory hosts.
 
 # --- On-demand warmup endpoints to avoid long first requests timing out ---
 _WARM_STATUS: dict[str, str] = {}
 
 def _start_warmup(event: str):
-    if fastf1 is None:
+    # No-op when FastF1 isn't available/enabled
+    if not FASTF1_ENABLED or fastf1 is None:
         return
     key = (event or "Monza").strip() or "Monza"
     if _WARM_STATUS.get(key) == "running":
@@ -87,10 +74,47 @@ def warm_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def build_track_df(year:int, event:str, session_code:str="R", n_segments:int=10) -> pd.DataFrame:
+def build_track_df(year:int, event:str, session_code:str="R", n_segments:int=10) -> object:
     """Fetch telemetry for a session and bin into segments matching the notebook schema."""
-    if fastf1 is None:
-        raise RuntimeError("fastf1 is not installed in this environment.")
+    # If FastF1 isn't enabled (or not available), use a small precomputed
+    # dataset row as a lightweight fallback. This avoids importing FastF1 on
+    # constrained hosts (e.g. Render free tier) which frequently causes
+    # out-of-memory / 502 errors.
+    if not FASTF1_ENABLED or fastf1 is None:
+        try:
+            import pandas as pd
+            import numpy as np
+            # make available module-wide so later code can use pd/np
+            globals()["pd"] = pd
+            globals()["np"] = np
+        except Exception as e:
+            raise RuntimeError("pandas/numpy are required for fallback mode; install requirements before running the app.") from e
+        # Load the packaged training CSV and try to find a matching event row
+        csv_path = os.path.join(os.path.dirname(__file__), "datasets", "ers_training.csv")
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError("Fallback dataset not found (datasets/ers_training.csv). Enable FASTF1 or provide the dataset.")
+        df_all = pd.read_csv(csv_path)
+        # Try a case-insensitive contains match, fallback to first row
+        matches = df_all[df_all['event'].str.contains(str(event), case=False, na=False)]
+        if not matches.empty:
+            row = matches.iloc[0]
+        else:
+            row = df_all.iloc[0]
+        rows = []
+        for i in range(n_segments):
+            length = float(row.get(f'length_{i}', 0.0))
+            speed = float(row.get(f'speed_{i}', row.get('avg_speed_kph', 100.0)))
+            brake = int(row.get(f'brake_{i}', 0))
+            drs = int(row.get(f'drs_{i}', 0))
+            rows.append({
+                "length_m": max(0.1, length),
+                "baseline_speed_kph": max(1.0, speed),
+                "is_braking_zone": int(brake),
+                "is_drs_zone": int(drs)
+            })
+        out = pd.DataFrame(rows)
+        return out
+
     # Normalize common short names to FastF1 event names
     aliases = {
         "BAHRAIN": "Bahrain",
@@ -106,6 +130,15 @@ def build_track_df(year:int, event:str, session_code:str="R", n_segments:int=10)
     }
     key = str(event).strip().upper()
     event_norm = aliases.get(key, event)
+    # Ensure numpy/pandas are available for telemetry processing
+    try:
+        import numpy as np
+        import pandas as pd
+        globals()["np"] = np
+        globals()["pd"] = pd
+    except Exception:
+        raise RuntimeError("numpy/pandas are required for FastF1 telemetry processing")
+
     session = fastf1.get_session(year, event_norm, session_code)
     session.load()
     lap = session.laps.pick_fastest()
@@ -158,9 +191,22 @@ def generate_strategy(track_condition, drs_enabled):
     
     return lap_time, strategy
 
-def create_visualization(x_mid: np.ndarray, speed_kph: np.ndarray, battery_mj: np.ndarray,
+def create_visualization(x_mid: object, speed_kph: object, battery_mj: object,
                          title_suffix: str) -> str:
     """Dual-axis plot of speed and battery over segment midpoints; return static path."""
+    # Lazy-import matplotlib to reduce import-time memory footprint
+    global matplotlib, plt, patheffects, mcolors
+    if plt is None:
+        import matplotlib
+        matplotlib.use("Agg")  # headless backend for server-side image generation
+        import matplotlib.pyplot as plt
+        import matplotlib.patheffects as patheffects
+        from matplotlib import colors as mcolors
+        globals()["matplotlib"] = matplotlib
+        globals()["plt"] = plt
+        globals()["patheffects"] = patheffects
+        globals()["mcolors"] = mcolors
+
     plt.figure(figsize=(12, 6))
     ax1 = plt.gca()
     ax1.plot(x_mid, speed_kph, 'b-o', label='Speed (KPH)')
@@ -280,6 +326,19 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
         1: "#e74c3c",  # DEPLOY
         2: "#27ae60",  # HARVEST
     }
+
+    # Lazy-import matplotlib elements if not already available
+    global matplotlib, plt, patheffects, mcolors
+    if plt is None:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.patheffects as patheffects
+        from matplotlib import colors as mcolors
+        globals()["matplotlib"] = matplotlib
+        globals()["plt"] = plt
+        globals()["patheffects"] = patheffects
+        globals()["mcolors"] = mcolors
 
     fig = plt.figure(figsize=(8, 8), facecolor="#0f1318")
     ax = plt.gca()
@@ -489,9 +548,10 @@ def _ensure_joblib():
         import joblib  # type: ignore
         return joblib
     except Exception:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "joblib", "scikit-learn", "--quiet"])  # noqa: E501
-        import joblib  # type: ignore
-        return joblib
+        # Do not install runtime packages inside the web process on constrained
+        # hosts. Fail fast with a clear message so the deployer can ensure
+        # dependencies are installed at build time (requirements.txt / Docker).
+        raise RuntimeError("joblib (and scikit-learn) not available. Install requirements before running the app.")
 
 
 def load_policy_model(model_path: str = os.path.join(os.path.dirname(__file__), "models", "ers_policy.pkl")):
@@ -505,7 +565,7 @@ def load_policy_model(model_path: str = os.path.join(os.path.dirname(__file__), 
     return _POLICY_CACHE
 
 
-def _build_policy_features(df: pd.DataFrame, track_condition: str, drs_enabled: bool, feature_names: list) -> np.ndarray:
+def _build_policy_features(df: object, track_condition: str, drs_enabled: bool, feature_names: list) -> object:
     """Create a feature vector aligned with saved feature_names from the trained model."""
     n = len(df)
     lengths = df["length_m"].astype(float).to_numpy()
@@ -623,12 +683,11 @@ def run_ai():
                 policy_error = str(e)
                 use_policy = False
         else:
-            # Run GA optimizer (auto-install if missing)
+            # Run GA optimizer (no runtime installs - ensure requirements installed at build time)
             try:
                 from geneticalgorithm import geneticalgorithm as ga
             except Exception:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "geneticalgorithm", "--quiet"])  # non-interactive
-                from geneticalgorithm import geneticalgorithm as ga
+                raise RuntimeError("geneticalgorithm package not available. Install requirements before running the app.")
             var_boundaries = np.array([[0, 2]] * len(df))
             def fitness(x):
                 strat = [int(round(v)) for v in x]
