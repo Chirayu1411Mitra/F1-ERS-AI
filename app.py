@@ -289,7 +289,8 @@ def create_track_map_image(event: str, year: int, session_code: str, n_segments:
     Returns static path to the saved PNG.
     """
     if fastf1 is None:
-        raise RuntimeError("fastf1 is not installed in this environment.")
+        # Gracefully handle missing FastF1 by returning no image path
+        return None
     # Normalize event as in build_track_df
     aliases = {
         "BAHRAIN": "Bahrain",
