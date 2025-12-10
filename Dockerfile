@@ -20,7 +20,7 @@ RUN mkdir -p static models fastf1_cache
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=7860
-ENV FASTF1_ENABLED=1
+ENV FASTF1_ENABLED=0
 
 # Expose the port the app runs on
 EXPOSE 7860
